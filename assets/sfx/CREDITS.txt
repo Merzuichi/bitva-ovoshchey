@@ -1,0 +1,11 @@
+Все звуки игры — из пака пользователя HyperCasual_Voice_SFX (C:/Users/user/Desktop/HyperCasual_Voice_SFX).
+Сборка: python tools/import_sfx.py <папка пака> assets
+- обычные звуки — выбранные файлы пака (словарь MAP);
+- выстрелы, взрывы, полёт ракеты — смешаны из записей того же пака (словарь MIX), чтобы стиль был один;
+- громкость выровнена: самый громкий участок каждого файла −16 дБ; в игре громкость задаётся по группам (SND_VOL в js/sdk.js).
+Послушать: tools/sfx_preview.html
+
+gun_pistol_1..3, gun_ak_1..8, gun_shotgun_1..3 (v=376): based on "The Free Firearm Sound Library"
+(OpenGameArt, CC0 — https://opengameart.org/content/the-free-firearm-sound-library),
+recordings 1911, Walther PPQ, AK-47, PPSh, Mossberg, Nova, Model 12; processed into cartoon shots by tools/make_gun_sfx_real.py.
+gun_rocket, gun_pump, bow_twang, arrow_hit: synthesized by tools/make_gun_sfx.py.

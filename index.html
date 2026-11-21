@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Битва овощей</title><link rel="icon" href="data:,">
+<style>
+:root{--ui:#151926ee;--ui2:#232a3d;--line:#343c56;--text:#eef1ff;--muted:#8d95b5;--accent:#7ddc4a;--gold:#ffcc33;--red:#ff5c6c}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#000;color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;touch-action:none;overscroll-behavior:none}
+#game{position:fixed;inset:0;display:block;width:100%;height:100%}
+body.aiming #game{cursor:none} /* на ПК вместо курсора — перекрестие прицела (drawAimReticle) */
+.ib{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--ui);color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;flex:none}
+.ib.on{background:var(--accent);color:#0c2400;border-color:var(--accent)}
+.ib:active{transform:scale(.92)}
+.coins{background:var(--ui);border:1px solid var(--line);border-radius:12px;height:42px;padding:0 12px;display:flex;align-items:center;gap:6px;font-weight:800;color:var(--gold);font-size:16px}
+.dot{position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:var(--red);border:2px solid #151926}
+.grow{flex:1}
+/* видимость экранов */
+.sb,.play,#menu{display:none}
+body[data-screen=sandbox] .sb{display:flex}
+body[data-screen=play] .play{display:flex}
+body[data-screen=menu] #menu{display:flex}
+/* песочница */
+.bar{position:fixed;gap:6px;align-items:center;z-index:5}
+#top{top:8px;left:8px;right:8px;justify-content:space-between;pointer-events:none}
+#top>*{pointer-events:auto}
+.grp{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+#tools{left:8px;top:58px;flex-direction:column}
+#bottom{left:0;right:0;bottom:0;flex-direction:column;align-items:stretch;gap:0;background:var(--ui);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+#cats{display:flex;gap:4px;padding:6px 8px 0;overflow-x:auto;scrollbar-width:none;align-items:center}
+#cats::-webkit-scrollbar,#items::-webkit-scrollbar{display:none}
+.cat{flex:none;border:0;background:none;color:var(--muted);font-weight:700;font-size:13px;padding:6px 10px;border-radius:9px;cursor:pointer}
+.cat.on{background:var(--ui2);color:var(--text)}
+.teams{display:flex;align-items:center;gap:5px;margin-left:auto;padding-left:10px;flex:none;font-size:12px;color:var(--muted)}
+.tm{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;font-size:12px;padding:0}
+.tm.on{border-color:#fff;box-shadow:0 0 0 2px #0008}
+#items{display:flex;gap:6px;padding:6px 8px 8px;overflow-x:auto;scrollbar-width:none}
+.it{flex:none;width:68px;height:70px;border-radius:12px;background:var(--ui2);border:2px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;position:relative;font-size:11px;color:var(--muted);text-align:center;line-height:1.1}
+.it b{font-size:28px;line-height:1;height:34px;display:flex;align-items:center;justify-content:center}
+.spi{max-width:46px;max-height:34px;display:block}
+.he .spi{max-width:44px;max-height:44px;margin:auto}.hch .spi{max-height:30px;max-width:40px}#hpico .spi{max-height:24px;max-width:28px}
+.it.on{border-color:var(--accent);color:var(--text)}
+.it.lock b{filter:grayscale(1) brightness(.6)}
+.it .lk{position:absolute;top:2px;right:3px;font-size:10px;font-weight:800;color:var(--gold);background:#0009;border-radius:6px;padding:1px 4px}
+.it .lk.ad{color:#fff;background:linear-gradient(135deg,#8a5cff,#d05cff)}
+/* уровень */
+#hud{position:fixed;top:8px;left:8px;right:8px;z-index:5;align-items:flex-start;gap:8px;pointer-events:none}
+#hud>*{pointer-events:auto}
+.hp{background:var(--ui);border:1px solid var(--line);border-radius:12px;padding:6px 10px;display:flex;align-items:center;gap:8px;min-width:160px}
+.hp #hpico{font-size:22px}
+#hpbar{flex:1;height:10px;background:#0008;border-radius:5px;overflow:hidden;min-width:90px}
+#hpbar i{display:block;height:100%;width:100%;background:#5fdc4a;transition:width .2s}
+#hpnum{font-weight:800;font-size:13px;min-width:26px;text-align:right}
+.obj{flex:1;text-align:center;pointer-events:none}
+.obj #lvname{font-size:12px;color:#fff;text-shadow:0 1px 3px rgba(92,52,24,.5);font-weight:700}
+.obj #obj{display:inline-block;margin-top:3px;background:var(--ui);border:1px solid var(--line);border-radius:10px;padding:5px 12px;font-weight:800;font-size:15px}
+#controls{position:fixed;left:0;right:0;bottom:0;z-index:6;justify-content:space-between;padding:0 14px max(12px,env(safe-area-inset-bottom));pointer-events:none}
+#controls .cl,#controls .cr{display:flex;gap:12px;pointer-events:auto;align-items:flex-end}
+#controls button{width:68px;height:68px;border-radius:50%;touch-action:none;cursor:pointer;-webkit-user-select:none}
+#controls button.atk{width:80px;height:80px}
+#tip{position:fixed;left:50%;top:70px;transform:translate(-50%,-10px);z-index:7;background:#000c;border:1px solid var(--line);border-radius:14px;padding:10px 16px;font-weight:700;text-align:center;line-height:1.4;max-width:88%;opacity:0;transition:.4s;pointer-events:none;font-size:14px}
+#tip.on{opacity:1;transform:translate(-50%,0)}
+#banner{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:7;font-size:40px;font-weight:900;text-align:center;color:#fff;text-shadow:0 3px 0 rgba(92,52,24,.5),0 0 20px rgba(92,52,24,.5);opacity:0;pointer-events:none;white-space:nowrap}
+#banner small{display:block;font-size:20px;margin-top:4px}
+#banner.on{animation:ban 2s ease-out}
+@keyframes ban{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}25%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0}}
+/* меню */
+#menu{position:fixed;inset:0;z-index:8;flex-direction:column;background:linear-gradient(180deg,#0b0e18bb,#0b0e1844 45%,#0b0e1800 62%);padding:10px;pointer-events:none}
+#menu>*{pointer-events:auto}
+.mtop{display:flex;gap:8px;align-items:center}
+.mcenter{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;margin-top:-6px}
+#menu h1{margin:0;font-size:46px;text-shadow:0 4px 0 #1d4d12,0 0 24px rgba(92,52,24,.5);letter-spacing:1px}
+#menu .sub{margin:0 0 6px;color:#dfe6ff;text-shadow:0 1px 4px rgba(92,52,24,.5);font-weight:600}
+.modes{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.mode{display:flex;align-items:center;gap:10px;background:#151926e6;border:2px solid var(--line);border-radius:18px;padding:14px 18px;color:var(--text);cursor:pointer;min-width:190px;text-align:left;font-weight:800;font-size:18px}
+.mode:hover{border-color:var(--accent)}.mode:active{transform:scale(.97)}
+.mode b{font-size:36px}.mode small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:2px}
+.heroesbtn{max-width:300px}
+/* модалки */
+#modal{position:fixed;inset:0;z-index:20;background:#000a;display:none;align-items:center;justify-content:center;padding:12px}
+#modal.on{display:flex}
+.box{background:#151926;border:1px solid var(--line);border-radius:18px;padding:18px;max-width:380px;width:100%;max-height:94%;overflow:auto;animation:pop .2s ease-out;text-align:center}
+.box.wide{max-width:620px}
+@keyframes pop{from{transform:scale(.92);opacity:0}}
+.box.stay{animation:none} /* перерисовка уже открытого окна — без мигания (modal в ui.js) */
+.box h3{margin:4px 0 6px;font-size:20px}
+.box p{color:var(--muted);margin:4px 0 12px;font-size:14px;line-height:1.4}
+.big{font-size:56px;line-height:1.1}
+.btn{display:flex;width:100%;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:12px;font-weight:800;font-size:15px;cursor:pointer;margin-top:8px;background:var(--ui2);color:var(--text)}
+.btn:active{transform:scale(.97)}
+.btn.ad{background:linear-gradient(135deg,#8a5cff,#d05cff);color:#fff}
+.btn.g{background:var(--accent);color:#0c2400}.btn.y{background:var(--gold);color:#2a1e00}
+.btn.sm{width:auto;margin:0;padding:8px 12px;font-size:13px;flex:none}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.row2{display:flex;gap:8px}.row2 .btn{flex:1}
+.shop{display:flex;align-items:center;gap:10px;background:var(--ui2);border-radius:12px;padding:10px;margin-top:8px;text-align:left}
+.shop .e{font-size:30px}.shop .t{flex:1;font-weight:700;font-size:14px}.shop .t small{display:block;color:var(--muted);font-weight:500;font-size:12px}
+.maps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.map{background:var(--ui2);border-radius:12px;padding:10px 4px;cursor:pointer;border:2px solid transparent;font-size:12px;font-weight:700}
+.map b{display:block;font-size:30px}.map.on{border-color:var(--accent)}.mlk{color:var(--gold);font-size:11px}
+.lv{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
+.lvc{background:var(--ui2);border-radius:12px;padding:10px 4px;cursor:pointer;border:2px solid transparent}
+.lvc:hover{border-color:var(--accent)}
+.lvc b{font-size:22px;display:block}.lvc small{display:block;font-size:11px;color:var(--muted);min-height:28px;line-height:1.2;margin:2px 0}
+.lvc.lock{opacity:.45}
+.st{color:var(--gold);font-size:14px;letter-spacing:1px}.st span,.stars3 span{color:#ffffff22}
+.stars3{font-size:40px;color:var(--gold);letter-spacing:4px}
+.hlist{display:flex;flex-direction:column;gap:8px;text-align:left;margin:6px 0}
+.hc{display:flex;align-items:center;gap:10px;background:var(--ui2);border-radius:14px;padding:10px;border:2px solid transparent;cursor:pointer}
+.hc.sel{border-color:var(--accent)}.hc.lock .he{filter:grayscale(1) brightness(.6)}
+.hc.big{align-items:flex-start;cursor:default}
+.he{font-size:38px;width:50px;text-align:center;flex:none}
+.hi{flex:1;min-width:0;font-size:15px}.hs{font-size:12px;color:var(--muted);margin-top:2px}
+.upg{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.ur{display:flex;align-items:center;gap:8px;font-size:13px}
+.ur>span:first-child{width:96px;flex:none}
+.pips{display:flex;gap:2px;flex:1}.pips i{flex:1;height:8px;border-radius:2px;background:#ffffff1a}.pips i.f{background:var(--accent)}
+.mx{color:var(--accent);font-size:12px;flex:none}
+.wsel{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.wch{width:36px;height:36px;border-radius:10px;border:2px solid transparent;background:#0004;font-size:18px;cursor:pointer}
+.wch.on{border-color:var(--gold);background:#ffcc3322}
+.htop{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.tabs{display:flex;gap:4px;background:#0004;border-radius:12px;padding:3px}
+.tabs button{border:0;background:none;color:var(--muted);font-weight:800;padding:8px 12px;border-radius:9px;cursor:pointer;font-size:14px}
+.tabs button.on{background:var(--ui2);color:var(--text)}
+.tabs.ctr{display:inline-flex;margin:2px auto 8px}
+.rec{background:#0004;border-radius:12px;padding:6px;max-height:210px;overflow:auto;text-align:left}
+.rec table{width:100%;border-collapse:collapse;font-size:14px}
+.rec td{padding:7px 6px;border-bottom:1px solid #ffffff10}
+.rec tr:last-child td{border-bottom:0}
+.rec td.pl{width:34px;text-align:center;font-weight:800}
+.rec td.nm{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec td.dt{color:var(--muted);font-size:12px;text-align:right}
+.rec tr.me td{background:#7ddc4a22;color:#fff}
+.rec .empty{color:var(--muted);text-align:center;padding:16px 8px;font-size:13px;line-height:1.4}
+.besth{margin:8px 0;font-size:14px;color:var(--muted)}.besth b{color:var(--gold);font-size:16px}
+.hsel{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.hch{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;width:78px;padding:8px 4px;border-radius:12px;border:2px solid transparent;background:var(--ui2);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer}
+.hch b{font-size:28px;line-height:1}.hch.on{border-color:var(--accent);color:var(--text)}
+.hch.lock b{filter:grayscale(1) brightness(.6)}.hch i{position:absolute;top:2px;right:4px;font-style:normal;font-size:11px}
+.ctrt{text-align:center;margin-top:6px}
+.mnote{font-size:12px;color:var(--muted);background:#0003;border-radius:10px;padding:7px 10px}
+.acth{text-align:left;font-weight:800;font-size:15px;margin:12px 2px 6px}.acth.lock{opacity:.45}
+.dtitle{font-size:12px;color:var(--muted);text-align:left;margin-bottom:8px;font-weight:700}
+.dlg{display:flex;gap:12px;align-items:flex-start;text-align:left;min-height:120px}
+.dpor{width:110px;height:110px;flex:none;border-radius:16px;background:var(--ui2);display:flex;align-items:center;justify-content:center;font-size:56px;overflow:hidden}
+.dpor img{width:100%;height:100%;object-fit:contain}
+.dtxt b{font-size:17px}.dtxt p{color:var(--text)!important;font-size:16px!important;margin-top:6px!important}
+.wild{font-size:11px;background:#ff4545;color:#fff;border-radius:6px;padding:1px 6px;vertical-align:2px}
+/* ===== графика интерфейса ===== */
+.ico{height:1.15em;width:auto;vertical-align:-.24em;display:inline-block}
+.ib .ico{height:28px;vertical-align:0}.coins .ico{height:24px}.cat .ico{height:18px;vertical-align:-4px}
+.hs .ico,.hs .spi{height:15px!important;max-height:15px;width:auto;display:inline-block;vertical-align:-3px;margin:0}
+.ur .ico{height:18px}
+#menu .logo{width:auto;max-width:min(680px,88vw);height:min(190px,24vh);object-fit:contain;filter:drop-shadow(0 6px 12px #0009)}
+#menu h1{line-height:0}
+.mode b img{width:64px;height:64px;object-fit:contain;display:block}
+.stars .ico{height:16px;vertical-align:-3px;margin:0 1px}.stars.big .ico{height:42px;margin:0 3px}
+.lvc .chimg{width:100%;aspect-ratio:320/200;object-fit:cover;border-radius:8px;display:block;margin-bottom:4px}
+.lvc.lock .chimg{filter:grayscale(1) brightness(.5)}
+.lvc b{font-size:15px}
+/* кнопки — 9-slice из ui_btn_*.png (инсет 24px) */
+.btn{border:10px solid transparent;border-image:url(assets/ui/ui_btn_gray.png?v=20) 24 fill / 10px stretch;padding:3px 10px;color:#fff;text-shadow:0 1px 2px rgba(92,52,24,.5);border-radius:0;background:url(assets/ui/ui_btn_gray.png?v=20) 0 0/100% 100% no-repeat border-box}
+.btn.g{border-image-source:url(assets/ui/ui_btn_green.png?v=20);color:#0b2600;text-shadow:0 1px 0 #ffffff66;background:url(assets/ui/ui_btn_green.png?v=20) 0 0/100% 100% no-repeat border-box}
+.btn.y{border-image-source:url(assets/ui/ui_btn_yellow.png?v=20);color:#2a1e00;text-shadow:0 1px 0 #ffffff77;background:url(assets/ui/ui_btn_yellow.png?v=20) 0 0/100% 100% no-repeat border-box}
+.btn.ad{border-image-source:url(assets/ui/ui_btn_ad.png?v=20);color:#fff;background:url(assets/ui/ui_btn_ad.png?v=20) 0 0/100% 100% no-repeat border-box}
+.btn.sm{border-width:8px;border-image-width:8px;padding:1px 6px;--bw:8px}
+/* окна — 9-slice из ui_panel.png (инсет 36px) */
+.box{border:18px solid transparent;border-image:url(assets/ui/ui_panel.png?v=20) 36 fill / 18px stretch;background:none;padding:4px 6px;border-radius:0;background:url(assets/ui/ui_panel.png?v=20) 0 0/100% 100% no-repeat border-box}
+/* кнопки управления */
+/* картинки кнопок: только background-image/size, без сокращённого background — иначе он сбрасывает картинку */
+#controls button{border:0;padding:0;background-color:transparent;background-position:center;background-size:contain;background-repeat:no-repeat;font-size:0;color:transparent;transition:transform .06s,filter .06s}
+#controls button[data-k=left]{background-image:url(assets/ui/ui_ctrl_left.png?v=20)}
+#controls button[data-k=right]{background-image:url(assets/ui/ui_ctrl_right.png?v=20)}
+#controls button[data-k=jump]{background-image:url(assets/ui/ui_ctrl_jump.png?v=20)}
+#controls button[data-k=attack]{background-image:url(assets/ui/ui_ctrl_attack.png?v=20)}
+#controls button.on{filter:brightness(1.2);transform:scale(.9)}
+.map .mprev{width:100%;aspect-ratio:400/240;object-fit:cover;border-radius:8px;display:block;margin-bottom:4px}.map.locked .mprev{filter:grayscale(.8) brightness(.6)}
+.acth{position:relative;border-radius:12px;overflow:hidden;margin:12px 0 6px!important}
+.actimg{width:100%;aspect-ratio:1200/400;object-fit:cover;display:block}
+.acth span{position:absolute;left:10px;bottom:8px;font-size:18px;color:#fff;text-shadow:0 2px 0 rgba(92,52,24,.5),0 0 8px rgba(92,52,24,.5)}
+.acth.lock .actimg{filter:grayscale(.8) brightness(.55)}
+#toast{position:fixed;top:24%;left:50%;transform:translateX(-50%);z-index:30;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toast{background:#000c;border:1px solid var(--line);padding:8px 14px;border-radius:12px;font-weight:700;font-size:14px;animation:pop .2s;white-space:nowrap}
+#loading{position:fixed;inset:0;z-index:50;background:#1b2233;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:26px;gap:8px}
+#loading small{color:var(--muted);font-size:13px;font-weight:500}
+/* патроны, головоломки, карта глав */
+#ammo{display:flex;gap:2px;align-items:center;margin-left:4px;min-width:20px}
+#ammo i{width:4px;height:12px;border-radius:2px;background:#ffd23a;box-shadow:0 0 0 1px #0008}
+#ammo b{font-size:11px;color:#ffd23a}#ammo.low i{background:#ff7a3a}
+#ammo .rl{display:inline-block;color:#ffd23a;font-weight:900;font-size:16px;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#hud .grp{display:flex;gap:6px}
+#pRestart{font-size:22px;font-weight:900}
+body:not(.puzzle) #pRestart{display:none}
+body.puzzle #controls{display:none}
+body.shot #toast{display:none}
+.legend{font-size:12px;color:var(--muted);margin:-4px 0 4px}
+.lvc{position:relative}
+.lvc .ty{position:absolute;top:6px;left:6px;font-style:normal;font-size:13px;background:#000a;border-radius:8px;padding:1px 5px}
+.lvc .ty .ico{height:14px}
+.lvc.boss{border-color:#ffcc3355}.lvc.next{border-color:var(--accent);box-shadow:0 0 12px #7ddc4a66}
+.acth em{position:absolute;right:10px;bottom:8px;font-style:normal;font-weight:800;color:#fff;text-shadow:0 2px 0 rgba(92,52,24,.5)}
+
+/* =================== Тема «Солнечный огород» (assets/ui, набор sunny-garden) =================== */
+/* текст в светлых окнах и на деревянных панелях — тёмно-коричневый */
+.box,#bottom,.toast,#tip,#obj{--text:#3a2518;--muted:#7a5638;--ink:#3a2518}
+.box{color:var(--text)}
+.box p,.box .small{color:var(--muted)}
+/* заголовок окна — красная лента */
+.box h3{display:table;margin:-4px auto 10px;min-width:58%;padding:9px 6px 15px;font-size:19px;font-weight:900;color:#fff4dc;text-shadow:0 2px 0 #7a1a12,0 0 3px #7a1a12;
+ border-style:solid;border-color:transparent;border-width:0 38px;border-image:url(assets/ui/ui_ribbon.png?v=20) 0 120 fill / 0 38px stretch;line-height:1.2;background:url(assets/ui/ui_ribbon.png?v=20) 0 0/100% 100% no-repeat border-box}
+/* кнопки: светлый текст с тёмной тенью, на жёлтой — тёмный */
+.btn{color:#fff4dc;text-shadow:0 2px 0 rgba(92,52,24,.5),0 0 2px rgba(92,52,24,.5);font-weight:900}
+.btn.g,.btn.ad,.btn.r,.btn.b{color:#fff4dc;text-shadow:0 2px 0 rgba(92,52,24,.5),0 0 2px rgba(92,52,24,.5)}
+.btn.y{color:#3a2518;text-shadow:0 1px 0 #fff6}
+.btn.r{border-image-source:url(assets/ui/ui_btn_red.png?v=20);background:url(assets/ui/ui_btn_red.png?v=20) 0 0/100% 100% no-repeat border-box}.btn.b{border-image-source:url(assets/ui/ui_btn_blue.png?v=20);background:url(assets/ui/ui_btn_blue.png?v=20) 0 0/100% 100% no-repeat border-box}
+/* кнопки-иконки: рамка из дерева и листьев, включённая — жёлтая */
+.ib{width:50px;height:50px;border:0;border-radius:0;background:url(assets/ui/ui_ib_alt.png?v=20) center/100% 100% no-repeat;color:#3a2518;font-weight:900;font-size:17px}
+.ib.on{background:url(assets/ui/ui_ib_on.png?v=20) center/100% 100% no-repeat;color:#3a2518;border:0}
+.ib .ico{height:30px}
+.dot{width:16px;height:16px;border:0;background:url(assets/ui/ui_dot.png?v=20) center/contain no-repeat;top:-4px;right:-4px}
+/* счётчик монет: монета в круглом гнезде, число на светлой плашке */
+.coins{position:relative;width:156px;height:47px;padding:0 10px 0 56px;border:0;border-radius:0;background:url(assets/ui/ui_coinbar.png?v=20) center/100% 100% no-repeat;color:#3a2518;font-size:19px;font-weight:900;justify-content:center;flex:none}
+.coins .ico{position:absolute;left:12%;top:13%;height:66%;width:auto}
+/* главное меню: фон огорода, карточки режимов */
+#menu{background:linear-gradient(180deg,#1a3a1066,#1a3a1000 38%)}
+#menu .sub{color:#fff;text-shadow:0 2px 0 #2f7d22,0 0 6px #2f7d22}
+.modes{gap:16px}
+.mode{position:relative;width:250px;height:125px;min-width:0;padding:0 12px 6px 88px;border:0;border-radius:0;background:center/100% 100% no-repeat;color:#fff4dc;font-size:21px;font-weight:900;text-shadow:0 2px 0 rgba(92,52,24,.5),0 0 3px rgba(92,52,24,.5);justify-content:flex-start}
+.mode[data-m=sandbox]{background-image:url(assets/ui/ui_modecard_sandbox.png?v=20)}.mode[data-m=story]{background-image:url(assets/ui/ui_modecard_story.png?v=20)}.mode[data-m=arcade]{background-image:url(assets/ui/ui_modecard_arcade.png?v=20)}
+.mode b{position:absolute;left:4.5%;top:19%;width:29%;height:54%;display:flex;align-items:center;justify-content:center}
+.mode b img{width:92%;height:92%}
+.mode small{color:#fff4dc;font-weight:700;opacity:.95;text-shadow:0 1px 0 rgba(92,52,24,.5)}
+.mode:hover{filter:brightness(1.06)}
+.heroesbtn{max-width:320px;font-size:17px;min-height:58px}
+/* загрузка */
+#loading{background:url(assets/ui/ui_loading.jpg?v=40) center/cover no-repeat;color:#3a2518;text-shadow:0 2px 0 #fff4dc}
+#loading small{color:#3a2518}
+/* окна: карточки, строки, слоты — дерево; выбранные — с жёлтым сиянием */
+.hc,.shop,.lvc,.map,.hch,.rec{background:none;border:14px solid transparent;border-radius:0;border-image:url(assets/ui/ui_card.png?v=21) 28 fill / 14px stretch;padding:0;background:url(assets/ui/ui_card.png?v=21) 0 0/100% 100% no-repeat border-box}
+.hc{padding:0 2px}.shop{padding:0 2px;margin-top:6px}.lvc{padding:0}.map{padding:0}.hch{padding:0;width:84px}.rec{padding:0}
+.hc.sel,.hch.on,.map.on,.lvc.next,.lvc.boss{border-image-source:url(assets/ui/ui_card_sel.png?v=21);background:url(assets/ui/ui_card_sel.png?v=21) 0 0/100% 100% no-repeat border-box}
+.lvc:hover,.hc:hover,.map:hover{filter:brightness(1.05)}
+.lvc.boss{border-image-source:url(assets/ui/ui_card_sel.png?v=21);background:url(assets/ui/ui_card_sel.png?v=21) 0 0/100% 100% no-repeat border-box}
+.rec td{border-bottom:1px solid #3a251822}.rec tr.me td{background:#ffcc3355;color:#3a2518}
+.mnote{background:#3a25180f;color:var(--muted)}
+.wch{background:#3a251812;border:2px solid transparent}.wch.on{border-color:#ffcc33;background:#ffcc3340}
+/* вкладки */
+.tabs{background:none;padding:0;gap:4px}
+.tabs button{border:8px solid transparent;border-image:url(assets/ui/ui_tab.png?v=20) 24 fill / 8px stretch;border-radius:0;color:#fff4dc;text-shadow:0 1px 0 rgba(92,52,24,.5);padding:2px 6px;font-size:13px;background:url(assets/ui/ui_tab.png?v=20) 0 0/100% 100% no-repeat border-box}
+.tabs button.on{border-image-source:url(assets/ui/ui_tab_on.png?v=20);color:#3a2518;text-shadow:none;background:url(assets/ui/ui_tab_on.png?v=20) 0 0/100% 100% no-repeat border-box}
+/* у картинок-рамок скруглённые углы: заливка под ними торчала бы квадратными уголками */
+.tabs button,.tabs button.on{background:none!important}
+/* деления прокачки */
+.pips{gap:3px}.pips i{height:15px;border-radius:0;background:url(assets/ui/ui_pip.png?v=20) center/contain no-repeat}.pips i.f{background:url(assets/ui/ui_pip_on.png?v=20) center/contain no-repeat}
+/* баннер акта в рамке */
+.acth{position:relative}.acth::after{content:"";position:absolute;inset:0;background:url(assets/ui/ui_act_frame.png?v=20) center/100% 100% no-repeat;pointer-events:none}
+.acth span,.acth em{z-index:1}
+/* диалог: рамка портрета, облачко реплики, табличка с именем */
+.dpor{position:relative;background:none;border-radius:0;width:118px;height:118px;overflow:visible}
+.dpor img{position:absolute;inset:12%;width:76%;height:76%}
+.dpor::after{content:"";position:absolute;inset:0;background:url(assets/ui/ui_portrait_frame.png?v=20) center/100% 100% no-repeat}
+.dtxt{flex:1;border:24px solid transparent;border-image:url(assets/ui/ui_speech.png?v=20) 48 fill / 24px stretch;padding:0 4px;margin-top:-6px;background:url(assets/ui/ui_speech.png?v=20) 0 0/100% 100% no-repeat border-box}
+.dtxt b{display:inline-block;margin:-6px 0 2px -4px;padding:5px 26px 8px;background:url(assets/ui/ui_nameplate.png?v=20) center/100% 100% no-repeat;color:#3a2518}
+.dtxt p{color:#3a2518!important}
+.wild{background:url(assets/ui/ui_tag_wild.png?v=20) center/100% 100% no-repeat;border-radius:0;padding:3px 12px;color:#fff4dc;text-shadow:0 1px 0 #7a1a12}
+.dtitle{color:#7a5638!important;text-shadow:none}
+/* победа и поражение: эмблемы и вращающиеся лучи */
+.emb{position:relative;width:118px;height:118px;margin:-6px auto 2px;z-index:0}
+.box h3,.box .btn,.box .stars{position:relative;z-index:1}
+.emb img{position:absolute;inset:0;width:100%;height:100%}
+.emb .rays{inset:-60%;width:220%;height:220%;animation:spin 9s linear infinite;opacity:.9}
+/* уровень: плашка героя (портрет в гнезде, полоска в желобе, патроны), плашка цели */
+.hp{position:relative;display:block;width:300px;height:70px;min-width:0;padding:0;border:0;border-radius:0;background:url(assets/ui/ui_hud_hp.png?v=20) center/100% 100% no-repeat}
+.hp #hpico{position:absolute;left:4.6%;top:12.5%;width:19.6%;height:70%;display:flex;align-items:center;justify-content:center;border-radius:50%;overflow:hidden}
+#hpico .spi{max-width:86%!important;max-height:86%!important}
+#hpbar{position:absolute;left:30.2%;width:64.6%;top:35%;height:26%;min-width:0;border-radius:99px;background:transparent}
+#hpbar i{border-radius:99px;box-shadow:inset 0 3px 0 #ffffff55,inset 0 -3px 0 #0003}
+#hpnum{position:absolute;left:30%;width:65%;top:31%;text-align:center;color:#fff;font-size:14px;font-weight:900;text-shadow:0 0 3px rgba(92,52,24,.5),0 1px 0 rgba(92,52,24,.5)}
+#ammo{position:absolute;left:31%;top:88%;margin:0}
+#ammo i{width:8px;height:16px;border-radius:0;background:url(assets/ui/ui_ammo.png?v=20) center/contain no-repeat;box-shadow:none}
+#ammo.low i{filter:hue-rotate(-35deg) saturate(1.6)}
+#ammo b,#ammo .rl{color:#ffcc33;text-shadow:0 1px 0 rgba(92,52,24,.5)}
+.obj #lvname{font-size:13px;text-shadow:0 1px 0 rgba(92,52,24,.5),0 0 4px rgba(92,52,24,.5)}
+.obj #obj{border:0;border-radius:0;color:#3a2518;font-size:16px;font-weight:900;padding:10px 40px 14px;border-style:solid;border-color:transparent;border-width:0 30px;border-image:url(assets/ui/ui_hud_obj.png?v=20) 0 75 fill / 0 30px stretch;background:none;min-width:180px;margin-top:1px;background:url(assets/ui/ui_hud_obj.png?v=20) 0 0/100% 100% no-repeat border-box}
+/* песочница: нижняя полка, вкладки категорий, слоты, ценники */
+#bottom{background:none;border:0;border-style:solid;border-color:transparent;border-width:12px 20px 6px;border-image:url(assets/ui/ui_bottombar.png?v=20) 24 40 fill / 12px 20px 6px stretch;background:url(assets/ui/ui_bottombar.png?v=20) 0 0/100% 100% no-repeat border-box}
+.cat{border:7px solid transparent;border-image:url(assets/ui/ui_tab.png?v=20) 24 fill / 7px stretch;border-radius:0;color:#fff4dc;text-shadow:0 1px 0 rgba(92,52,24,.5);padding:1px 6px;font-weight:800;background:url(assets/ui/ui_tab.png?v=20) 0 0/100% 100% no-repeat border-box}
+.cat.on{border-image-source:url(assets/ui/ui_tab_on.png?v=20);color:#3a2518;text-shadow:none;background:none;background:url(assets/ui/ui_tab_on.png?v=20) 0 0/100% 100% no-repeat border-box}
+.it{background:none;border:11px solid transparent;border-image:url(assets/ui/ui_slot.png?v=20) 24 fill / 11px stretch;border-radius:0;width:74px;height:78px;color:#3a2518;font-weight:700;padding:0;background:url(assets/ui/ui_slot.png?v=20) 0 0/100% 100% no-repeat border-box}
+.it.on{border-image-source:url(assets/ui/ui_slot_on.png?v=20);color:#3a2518;background:url(assets/ui/ui_slot_on.png?v=20) 0 0/100% 100% no-repeat border-box}
+.it .lk{top:-9px;right:-9px;color:#3a2518;background:url(assets/ui/ui_badge_coin.png?v=20) center/100% 100% no-repeat;border-radius:0;padding:2px 6px 3px 17px;font-size:10px}
+.it .lk .ico{display:none}
+.it .lk.ad{background-image:url(assets/ui/ui_badge_ad.png?v=20);color:#fff;width:34px;height:14px;padding:0}
+.it .lk.ad .ico{display:none}
+.teams span{color:#3a2518;font-weight:800}
+/* всплывающие сообщения и подсказки */
+.toast{border:0;border-radius:0;color:#3a2518;font-weight:800;padding:12px 30px 16px;border-style:solid;border-color:transparent;border-width:0 26px;border-image:url(assets/ui/ui_toast.png?v=20) 0 64 fill / 0 26px stretch;background:none;background:url(assets/ui/ui_toast.png?v=20) 0 0/100% 100% no-repeat border-box}
+#tip{border:0;border-radius:0;color:#3a2518;background:none;padding:6px 10px 8px 6px;border-style:solid;border-color:transparent;border-width:16px 18px 16px 52px;border-image:url(assets/ui/ui_tip.png?v=20) 40 40 40 130 fill / 16px 18px 16px 52px stretch;background:url(assets/ui/ui_tip.png?v=20) 0 0/100% 100% no-repeat border-box}
+.legend{color:var(--muted)}
+
+/* =================== Тема: размеры и читаемость по примерам пака (main-menu.jpg, hud-layout.jpg) =================== */
+/* обводка светлого текста на цветных плашках — 8 направлений, читается на любом фоне */
+:root{--ol:0 2px 0 #3a2518,0 -2px 0 #3a2518,2px 0 0 #3a2518,-2px 0 0 #3a2518,2px 2px 0 #3a2518,-2px 2px 0 #3a2518,2px -2px 0 #3a2518,-2px -2px 0 #3a2518,0 4px 0 #3a2518}
+.box,#bottom,.toast,#tip,#obj{--muted:#6b4a2c}
+body{font-family:"Segoe UI","Trebuchet MS",system-ui,-apple-system,Roboto,sans-serif}
+/* верхняя полоса: крупный счётчик монет и кнопки-иконки */
+.mtop{gap:10px;padding:6px 6px 0}
+.coins{width:214px;height:66px;padding:0 16px 4px 78px;font-size:27px}
+.coins .ico{left:11%;top:14%;height:64%}
+.ib{width:66px;height:66px;font-size:22px}.ib .ico{height:42px}
+#top .ib,#tools .ib{width:58px;height:58px}#top .ib .ico,#tools .ib .ico{height:36px}
+#top .coins{width:190px;height:58px;font-size:24px;padding-left:68px}
+.dot{width:20px;height:20px}
+/* меню: подпись под логотипом убрана, карточки и кнопка героев крупные */
+#menu .sub{display:none}
+#menu .logo{height:min(250px,30vh)}
+.mcenter{gap:18px;margin-top:-22px}
+.modes{gap:22px}
+.mode{width:330px;height:124px;padding:0 14px 6px 112px;border:0;border-style:solid;border-color:transparent;border-width:24px 24px 24px 84px;padding:0 4px 4px 22px;font-size:27px;letter-spacing:.5px;text-shadow:var(--ol);flex-direction:column;align-items:flex-start;justify-content:center}
+.mode[data-m=sandbox]{border-image:url(assets/ui/ui_modecard_sandbox.png?v=20) 38 38 38 134 fill / 24px 24px 24px 84px stretch;background:url(assets/ui/ui_modecard_sandbox.png?v=20) 0 0/100% 100% no-repeat border-box}
+.mode[data-m=story]{border-image:url(assets/ui/ui_modecard_story.png?v=20) 38 38 38 134 fill / 24px 24px 24px 84px stretch;background:url(assets/ui/ui_modecard_story.png?v=20) 0 0/100% 100% no-repeat border-box}
+.mode[data-m=arcade]{border-image:url(assets/ui/ui_modecard_arcade.png?v=20) 38 38 38 134 fill / 24px 24px 24px 84px stretch;background:url(assets/ui/ui_modecard_arcade.png?v=20) 0 0/100% 100% no-repeat border-box}
+.mode b{left:-74px;top:-11px;width:76px;height:76px}
+.mode b img{width:100%;height:100%}
+.mode span{display:block;line-height:1.1}
+.mode small{font-size:15px;font-weight:800;margin-top:4px;letter-spacing:0;text-shadow:var(--ol)}
+.mode small .ico{height:18px;vertical-align:-3px}
+.btn.heroesbtn{max-width:420px;min-height:76px;font-size:25px;border-width:14px;border-image-width:14px;--bw:14px}
+/* окна: крупнее и контрастнее */
+.box{max-width:470px;font-size:16px;padding:6px 10px}.box.wide{max-width:740px}
+.box h3{font-size:24px;padding:11px 10px 19px;border-width:0 44px;border-image-width:0 44px}
+.box p{font-size:16px;line-height:1.45}
+.btn{font-size:19px;min-height:58px;border-width:13px;border-image-width:13px;text-shadow:var(--ol);letter-spacing:.2px;--bw:13px}
+.btn.y{text-shadow:0 1px 0 #fff8}
+.btn.sm{font-size:15px;min-height:44px;border-width:10px;border-image-width:10px;padding:0 8px;--bw:10px}
+.row2{gap:10px}
+.hc{gap:12px;padding:2px 4px}.he{width:60px}.he .spi{max-width:56px!important;max-height:56px!important}
+.hi{font-size:18px;font-weight:700}.hi b{font-weight:900}.hs{font-size:14px;color:var(--muted);font-weight:600}
+.hs .ico,.hs .spi{height:17px!important;max-height:17px}
+.ur{font-size:15px;font-weight:700}.ur>span:first-child{width:118px}.ur .ico{height:22px}
+.pips{gap:2px}.pips i{height:20px}
+.mnote{font-size:14px;padding:9px 12px;border-radius:10px}
+.shop{gap:12px;padding:2px 4px}.shop .e{font-size:34px}.shop .e .ico{height:40px}.shop .t{font-size:17px;font-weight:800}.shop .t small{font-size:14px;color:var(--muted)}
+.lv{gap:10px}.lvc b{font-size:19px;font-weight:900}.lvc small{font-size:13px;font-weight:700;color:var(--muted);min-height:32px}
+.lvc .ty{font-size:15px}
+.acth span{font-size:22px;font-weight:900;text-shadow:var(--ol)}.acth em{font-size:17px;text-shadow:var(--ol)}
+.legend{font-size:15px;font-weight:700}
+.tabs button{font-size:16px;font-weight:900;min-height:46px;border-width:10px;border-image-width:10px;padding:0 10px;text-shadow:var(--ol)}
+.tabs button.on{text-shadow:none}
+.rec table{font-size:16px}.rec td{padding:9px 8px}.rec .empty{font-size:15px;color:var(--muted)}
+.besth{font-size:17px;color:var(--muted);font-weight:700}.besth b{font-size:20px;color:#c46a12}
+.rec-note{margin:-2px 0 8px;font-size:14px;font-weight:700;color:#8a5a2b;text-align:center}
+.hch{width:96px;font-size:14px;color:#3a2518;font-weight:800}.hch b .spi{max-height:42px!important;max-width:50px!important}
+.ctrt{font-size:14px}
+.map{font-size:15px;font-weight:800;color:#3a2518}.mlk{font-size:13px;font-weight:800;color:#c46a12}
+.empty{font-size:15px}
+.big{font-size:64px}
+/* диалог */
+.dtitle{font-size:14px!important;font-weight:800}
+.dpor{width:132px;height:132px}
+.dtxt b{font-size:19px;padding:6px 30px 9px}
+.dtxt p{font-size:19px!important;line-height:1.4;font-weight:600}
+/* уровень: крупная плашка героя, плашка цели, кнопки управления — как в примере */
+#hud{top:10px;left:12px;right:12px;gap:12px}
+.hp{width:420px;height:98px}
+#hpnum{font-size:19px;top:30%}
+#ammo{top:86%}#ammo i{width:10px;height:20px}
+.obj #lvname{font-size:15px;font-weight:800;text-shadow:var(--ol);color:#fff4dc}
+.obj #obj{font-size:21px;min-width:320px;padding:14px 50px 20px;border-width:0 40px;border-image-width:0 40px}
+.obj #obj .ico{height:24px;vertical-align:-5px}
+#hud .ib{width:70px;height:70px}#hud .ib .ico{height:44px}
+#controls{padding:0 22px max(18px,env(safe-area-inset-bottom))}
+#controls .cl,#controls .cr{gap:20px}
+#controls button{width:104px;height:104px}#controls button.atk{width:120px;height:120px}
+/* песочница: крупнее вкладки и слоты */
+.cat{font-size:15px;padding:3px 10px;border-width:9px;border-image-width:9px}
+.cat .ico{height:22px}
+.it{width:88px;height:94px;font-size:13px;font-weight:800}.it b{height:44px}.it b .spi{max-width:58px;max-height:44px}
+.it .lk{font-size:12px;padding:3px 7px 4px 20px}
+.tm{width:30px;height:30px;border:3px solid #3a2518}.tm.on{border-color:#fff;box-shadow:0 0 0 3px #3a2518}
+.teams span{font-size:14px}
+/* сообщения */
+.toast{font-size:18px;padding:14px 34px 18px}
+#tip{font-size:18px;font-weight:800;line-height:1.35;max-width:min(680px,92%)}
+#banner{font-size:46px;text-shadow:var(--ol),0 0 18px rgba(92,52,24,.5)}
+/* маленькие экраны: всё чуть компактнее */
+@media (max-height:560px){
+ .coins{width:176px;height:54px;font-size:22px;padding-left:62px}.ib{width:54px;height:54px}.ib .ico{height:34px}
+ .mode{width:270px;height:104px;font-size:22px}.mode b{width:64px;height:64px;top:-6px;left:-70px}
+ .heroesbtn{min-height:60px;font-size:20px}
+ .hp{width:330px;height:77px}#hpnum{font-size:16px}.obj #obj{font-size:17px;min-width:240px;padding:10px 36px 15px}
+ #hud .ib{width:56px;height:56px}#controls button{width:84px;height:84px}#controls button.atk{width:98px;height:98px}
+ .btn{font-size:17px;min-height:50px}
+}
+@media (max-width:720px){.mode{width:100%;max-width:340px}.modes{flex-direction:column;align-items:center;gap:12px}}
+
+/* монета точно в круглом гнезде счётчика (у всех размеров плашки соотношение одно — проценты совпадают) */
+.coins .ico{left:9.7%;top:4.5%;height:85%;width:auto}
+/* карточки режимов — всегда в один ряд, равные; на узком экране — столбиком */
+.modes{flex-wrap:nowrap;width:min(1040px,94vw);justify-content:center}
+.mode{flex:1 1 0;width:auto;max-width:330px;min-width:0;font-size:clamp(19px,2.2vw,27px)}
+.mode small{font-size:clamp(12px,1.25vw,15px);white-space:nowrap}
+@media (max-width:720px){.modes{flex-direction:column;align-items:center;flex-wrap:nowrap}.mode{flex:none;width:min(330px,90vw)}}
+/* песочница: ровные отступы — верхняя полоса, колонка инструментов ниже кнопки «Домой», одинаковые промежутки */
+#top{top:10px;left:10px;right:10px}#top .grp{gap:8px}
+#tools{top:80px;left:10px;gap:8px}
+#tools .ib{width:54px;height:54px}#tools .ib .ico{height:34px}
+#top .ib{width:54px;height:54px}#top .ib .ico{height:34px}
+#top .coins{width:176px;height:54px;font-size:22px;padding-left:64px}
+@media (max-height:620px){#tools{top:70px;gap:5px}#tools .ib{width:44px;height:44px}#tools .ib .ico{height:28px}#top .ib{width:46px;height:46px}#top .ib .ico{height:29px}#top .coins{width:150px;height:46px;font-size:19px;padding-left:54px}}
+@media (max-height:500px){#menu h1{font-size:32px}.mode{padding:10px 14px;min-width:160px;font-size:16px}.mode b{font-size:28px}#controls button{width:58px;height:58px}#controls button.atk{width:68px;height:68px}}
+@media (max-width:520px){.lv{grid-template-columns:repeat(3,1fr)}.mode{min-width:0;width:100%}}
+@font-face{font-family:Nunito;font-weight:700;font-display:swap;src:url(assets/fonts/nunito-cyrillic-700.woff2) format('woff2');unicode-range:U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Nunito;font-weight:700;font-display:swap;src:url(assets/fonts/nunito-latin-700.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Nunito;font-weight:800;font-display:swap;src:url(assets/fonts/nunito-cyrillic-800.woff2) format('woff2');unicode-range:U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Nunito;font-weight:800;font-display:swap;src:url(assets/fonts/nunito-latin-800.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Nunito;font-weight:900;font-display:swap;src:url(assets/fonts/nunito-cyrillic-900.woff2) format('woff2');unicode-range:U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Nunito;font-weight:900;font-display:swap;src:url(assets/fonts/nunito-latin-900.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+/* =================== Шрифт и обводка: округлый жирный Nunito, ровная обводка штрихом вместо «тени в 8 сторон» =================== */
+html,body{font-family:Nunito,"Segoe UI",system-ui,sans-serif}
+button,input{font-family:inherit}
+:root{--ol:0 3px 0 #3a2518}
+.btn,.mode,.mode small,.tabs button,.acth span,.acth em,.obj #lvname,#banner,.coins,.toast,.box h3{-webkit-text-stroke:2px #7a4a22;paint-order:stroke fill;font-weight:800}
+.mode small{-webkit-text-stroke:2px #7a4a22}
+.btn.y,.tabs button.on,.coins{-webkit-text-stroke:0}
+.btn{font-size:21px}
+.btn.sm{-webkit-text-stroke:2px #7a4a22}
+.dtxt p,.box p,.hi,.hs,.shop .t,.lvc small{font-weight:600}
+.dtxt p{font-size:20px!important;color:#3a2518}
+.hi b,.lvc b,.dtxt b{font-weight:900}
+.dtxt b{background:none;padding:0;margin:0 0 2px;font-size:23px;color:#c4561a}
+/* управление — пальцем по экрану, кнопки не нужны */
+/* кнопки ходьбы — только на сенсорных экранах; атака автоматическая, её кнопки нет */
+/* подарок в меню: под «Песочницей»; готов — качается, за ним крутятся лучи; нет — таймер */
+#mGift{position:fixed;z-index:1;left:max(14px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));width:140px;display:flex;flex-direction:column;align-items:center;cursor:pointer;pointer-events:auto}
+#mGift .gb{position:relative;width:124px;height:124px;object-fit:contain;filter:drop-shadow(0 6px 0 #0006);animation:giftBob 2.4s ease-in-out infinite}
+#mGift .rays{position:absolute;left:50%;top:62px;width:250px;height:250px;margin:-125px 0 0 -125px;opacity:0;pointer-events:none;transition:opacity .4s;animation:spin 12s linear infinite}
+#mGift.ready .rays{opacity:.45;animation-duration:6s}
+#mGift.ready .gb{animation:giftJump 1.1s cubic-bezier(.3,0,.4,1) infinite;filter:drop-shadow(0 6px 0 #0006) drop-shadow(0 0 18px #ffe27a)}
+@keyframes giftBob{50%{transform:translateY(-6px)}}
+@keyframes giftJump{0%,100%{transform:translateY(0) scale(1.06,.94)}12%{transform:translateY(0) scale(.94,1.08)}40%{transform:translateY(-30px) rotate(-7deg) scale(1)}55%{transform:translateY(-34px) rotate(6deg)}80%{transform:translateY(0) scale(1.1,.9)}}
+#mGift .gt{position:relative;margin-top:-12px;min-width:110px;text-align:center;padding:5px 14px 6px;border-radius:99px;background:#fff4dc;border:4px solid #3a2518;color:#3a2518;font-weight:900;font-size:21px;line-height:1.1;font-variant-numeric:tabular-nums;box-shadow:0 4px 0 #0005}
+#mGift.ready .gt{background:linear-gradient(#8de04f,#4fae2c);color:#fff;-webkit-text-stroke:2px #2c6b18;paint-order:stroke fill;animation:giftPulse 1.1s ease-in-out infinite}
+@keyframes giftPulse{50%{transform:scale(1.1)}}
+#mGift:active .gb{transform:scale(.92)}
+@media (max-height:560px){#mGift{width:100px}#mGift .gb{width:84px;height:84px}#mGift .gt{font-size:15px;min-width:80px;padding:3px 10px 4px}#mGift .rays{top:42px;width:170px;height:170px;margin:-85px 0 0 -85px}}
+#menu .mcenter{position:relative;z-index:2;pointer-events:none}#menu .mcenter>*{pointer-events:auto}
+/* меню: карточки режимов крупнее и ниже (под логотипом остаётся воздух) */
+/* без transform: карточки растут сами, но никогда не шире трети экрана (иначе вылезают за края) */
+@media (min-width:721px) and (min-height:501px){#menu .modes{margin-top:clamp(16px,8vh,110px);width:100%;max-width:1240px;align-self:center;box-sizing:border-box;padding:0 16px;gap:clamp(10px,2vw,28px);flex-wrap:nowrap}
+ #menu .mode{flex:1 1 0;min-width:0;max-width:390px;height:clamp(108px,14vh,124px);font-size:clamp(17px,2.1vw,31px)}}
+/* нижняя панель песочницы: читаемость. Команда — отдельной плашкой над панелью (не обрезается вкладками),
+   значки цены видны целиком, закрытое — серое, а не чёрный силуэт, подписи жирные и не режутся */
+#bottom{position:fixed}
+#bottom .teams{position:absolute;right:16px;top:-54px;margin:0;padding:5px 8px 5px 14px;gap:7px;background:#3a2518eb;border:3px solid #fff4dc55;border-radius:99px;box-shadow:0 4px 0 #0005}
+#bottom .teams span{color:#fff4dc;font-size:15px;font-weight:900;-webkit-text-stroke:0}
+#bottom .tm{width:30px;height:30px;border:3px solid #1b1208}#bottom .tm.on{border-color:#fff;box-shadow:0 0 0 3px #ffcc33,0 0 12px #ffcc33}
+#items{padding-top:16px!important;margin-top:-8px}
+/* карточки выделяются от деревянной панели: тёмный утопленный лоток под ними, контур и тень у каждой */
+#items{background:linear-gradient(#2a180c99,#3a251866);border-radius:14px;box-shadow:inset 0 3px 6px #0007,inset 0 -1px 0 #ffffff22;margin:-8px 6px 6px!important;padding-left:10px!important;padding-right:10px!important}
+.it{filter:drop-shadow(0 0 1.5px #2a1608) drop-shadow(0 4px 0 #1b0f06aa)}
+.it.on{filter:drop-shadow(0 0 2px #2a1608) drop-shadow(0 0 10px #8df05acc) drop-shadow(0 4px 0 #1b0f06aa)}
+.it:hover{filter:drop-shadow(0 0 1.5px #2a1608) drop-shadow(0 4px 0 #1b0f06aa) brightness(1.07)}
+.it{width:96px!important;font-size:13px!important;font-weight:900!important;color:#3a2518!important;white-space:nowrap;letter-spacing:-.2px}
+.it b{filter:drop-shadow(0 2px 0 #0003)}
+.it.lock b{filter:grayscale(1) brightness(1.08) contrast(.85) opacity(.75)!important}
+.it.lock::after{content:"";position:absolute;left:-6px;top:-8px;width:22px;height:22px;background:url(assets/ui/icon_lock.png?v=9) center/contain no-repeat;filter:drop-shadow(0 1px 0 #0006)}
+.it .lk{top:-14px!important;right:-12px!important;font-size:12px!important;font-weight:900;z-index:2}
+.it .lk.ad{width:46px!important;height:20px!important;top:-13px!important;right:-6px!important;background-size:100% 100%!important;display:flex;align-items:center;justify-content:flex-end;padding:0 6px 0 0!important}
+.it .lk.ad::after{content:'AD';font-size:10px;font-weight:900;color:#6b2fb3;letter-spacing:.5px}
+.it.lock{color:#6b4a2c!important}
+@media (max-height:440px){.it{width:76px!important;font-size:11px!important}#bottom .teams{top:-46px;padding:3px 6px 3px 10px}#bottom .tm{width:24px;height:24px}#bottom .teams span{font-size:13px}}
+/* «История» — главный режим: мягко пульсирует и светится, зовёт нажать */
+/* саму кнопку не масштабируем: её рамка — 9-slice, при scale между кусками видны светлые швы.
+   Пульсирует свечение позади и иконка */
+#menu .mode[data-m=story]::before{content:"";position:absolute;inset:-22px -26px -22px -100px;border-radius:60px;pointer-events:none;z-index:-1;
+ background:radial-gradient(closest-side,#fff7b0dd,#ffe27a77 55%,#ffe27a00);animation:storyGlow 1.4s ease-in-out infinite}
+#menu .mode b{animation:storyIcon 1.4s ease-in-out infinite}
+#menu .mode[data-m=sandbox] b{animation-delay:-.45s}#menu .mode[data-m=arcade] b{animation-delay:-.9s} /* иконки качаются не строго в такт */
+@keyframes storyGlow{0%,100%{opacity:.25;transform:scale(.94)}50%{opacity:1;transform:scale(1.04)}}
+@keyframes storyIcon{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(1.12) rotate(-4deg)}}
+@media (prefers-reduced-motion:reduce){#menu .mode[data-m=story]::before,#menu .mode b{animation:none}}
+/* подсказка: своя плашка ниже HUD (не прижимается к заданию), портрет советчика — в круге слева, не налезает на текст */
+#tip{top:clamp(150px,25vh,240px)!important;border:4px solid #3a2518!important;border-image:none!important;border-radius:20px!important;background:#fff4dc!important;
+ padding:12px 22px 13px 70px!important;box-shadow:0 5px 0 #0005,inset 0 -4px 0 #e9cf9c;color:#3a2518;font-size:19px!important;font-weight:800;line-height:1.3;max-width:min(640px,86%)!important;text-align:left}
+#tip::before{content:"";position:absolute;left:-18px;top:50%;width:76px;height:76px;margin-top:-38px;border-radius:50%;border:4px solid #3a2518;box-sizing:border-box;
+ background:url(assets/ui/portrait_ogurets.png?v=12) center 30%/120% no-repeat,radial-gradient(circle at 50% 40%,#fffbe9,#f6dca2 70%,#e9b866);box-shadow:0 4px 0 #0005}
+#tip.on{animation:tipPop .35s cubic-bezier(.3,1.5,.5,1)}
+@keyframes tipPop{from{transform:translate(-50%,-6px) scale(.85);opacity:0}}
+@media (max-height:440px){#tip{top:38%!important;font-size:14px!important;padding:8px 14px 9px 52px!important}#tip::before{width:56px;height:56px;margin-top:-28px;left:-14px}}
+.box.wide.hxbox{max-width:min(900px,96vw)}
+/* ===== экран героя (вариант A): слева портрет со стрелками, справа уровень, одна кнопка «Улучшить», оружие иконками ===== */
+.hx-sub{margin:-4px 0 6px!important;font-weight:800!important;font-size:17px!important}
+.hx{display:grid;grid-template-columns:clamp(276px,calc(30vw + 56px),376px) 1fr;gap:clamp(16px,2.6vw,34px);align-items:start;margin:6px 4px 10px;text-align:left}
+.hx-l{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;touch-action:pan-y;--ar:44px;--ag:10px;align-self:stretch}
+.hx-pw{position:relative;width:100%;box-sizing:border-box;padding:0 calc(var(--ar) + var(--ag))} /* рамка и стрелки: по бокам рамки место под стрелки, кнопка + зазор */
+/* выбранное оружие под портретом: занимает всё свободное место колонки и покачивается */
+.hx-wp{position:relative;flex:1 1 auto;width:100%;min-height:clamp(44px,14vh,90px)}
+.hx-wp::before{content:"";position:absolute;left:50%;top:50%;height:124%;aspect-ratio:1;border-radius:50%;pointer-events:none;
+ background:radial-gradient(closest-side,#fff 0,#ffffffb3 26%,#ffffff00 52%),repeating-conic-gradient(#fff 0 12deg,#fff0 15deg 27deg,#fff 30deg),radial-gradient(closest-side,#d98e4c 0,#d98e4c 62%,#d98e4c00 100%); /* тёмная подложка цвета свитка: на ней белые лучи видны */
+ -webkit-mask:radial-gradient(closest-side,#000 62%,#0000);mask:radial-gradient(closest-side,#000 62%,#0000);animation:hxWpRays 14s linear infinite,hxWpGlow 2.6s ease-in-out infinite} /* божественные лучи и свечение за оружием */
+@keyframes hxWpRays{from{transform:translate(-50%,-50%) rotate(0)}to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes hxWpGlow{0%,100%{opacity:.78}50%{opacity:1}}
+.hx-wp.off::before{display:none}
+.hx-wp img{position:absolute;left:4%;top:4%;width:92%;height:92%;object-fit:contain;transform-origin:50% 60%;animation:hxWpIdle 3.2s ease-in-out infinite;filter:drop-shadow(0 0 2px #fff) drop-shadow(0 0 10px #fff) drop-shadow(0 4px 0 #3a251833)}
+.hx-wp.off img{filter:grayscale(1) opacity(.6);animation:none}
+.hx-wp.pop img{animation:hxWpPop .45s cubic-bezier(.3,1.6,.5,1),hxWpIdle 3.2s ease-in-out .45s infinite}
+@keyframes hxWpIdle{0%,100%{transform:translateY(3%) rotate(-5deg)}50%{transform:translateY(-4%) rotate(5deg)}}
+@keyframes hxWpPop{0%{transform:scale(.3) rotate(-30deg);opacity:0}100%{transform:translateY(3%) rotate(-5deg);opacity:1}}
+@media (prefers-reduced-motion:reduce){.hx-wp img,.hx-wp.pop img{animation:none}.hx-wp::before{animation:none;transform:translate(-50%,-50%)}}
+.hx-pic{position:relative;width:100%;aspect-ratio:1/0.95;border:14px solid transparent;border-image:url(assets/ui/ui_card_sel.png?v=21) 28 fill / 14px stretch;display:flex;align-items:center;justify-content:center;
+ filter:drop-shadow(0 0 1.5px #2a1608) drop-shadow(0 0 12px #ffd23a88) drop-shadow(0 5px 0 #3a251855);background:url(assets/ui/ui_card_sel.png?v=21) 0 0/100% 100% no-repeat border-box}
+.hx-pic::before{content:"";position:absolute;inset:0;border-radius:12px;background:radial-gradient(circle at 50% 62%,#fff4dc 0,#f4d9a8 55%,#e2b77a 100%)}
+.hx-pic .por{position:relative;width:96%;height:auto;max-height:100%;object-fit:contain;transform-origin:50% 100%;animation:hxIdle 4.8s ease-in-out infinite;will-change:transform}
+/* живой портрет: дыхание, покачивание, раз в цикл — сжатие и вытягивание; низ картинки стоит на месте, поэтому зазора в рамке нет */
+@keyframes hxIdle{0%,50%,100%{transform:none}12%{transform:scale(1.012,.985) skewX(-.8deg)}25%{transform:scale(.992,1.016)}37%{transform:scale(1.012,.985) skewX(.8deg)}
+ 62%{transform:scale(1.055,.925)}70%{transform:scale(.955,1.075)}78%{transform:scale(1.025,.97)}86%{transform:scale(.995,1.01)}}
+.hx-pic.lock .por{animation:none}
+.hx-pic .por[src*=portrait_ogurets],.hx-pic .por[src*=portrait_morkov]{translate:-7% 0} /* в этих файлах рисунок смещён вправо */
+@media (prefers-reduced-motion:reduce){.hx-pic .por{animation:none}}
+.hx-pic.lock{border-image-source:url(assets/ui/ui_card.png?v=21);filter:drop-shadow(0 0 1.5px #2a1608) drop-shadow(0 5px 0 #3a251855);background:url(assets/ui/ui_card.png?v=21) 0 0/100% 100% no-repeat border-box}
+.hx-pic.lock .por{filter:grayscale(1) brightness(.72)}
+.hx-pic.pop{animation:hxPop .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes hxPop{40%{transform:scale(1.1)}}
+/* эффект прокачки (hxLevelFx) */
+.hx-fx{position:absolute;inset:0;pointer-events:none;z-index:3}
+.hx-fx i{position:absolute;left:50%;top:50%;display:block}
+.hx-fx .rays{width:260%;aspect-ratio:1;margin:-130% 0 0 -130%;border-radius:50%;background:repeating-conic-gradient(#ffe36a 0 14deg,#ffe36a00 14deg 36deg);-webkit-mask:radial-gradient(closest-side,#000 30%,#0000);mask:radial-gradient(closest-side,#000 30%,#0000);animation:hxRays 1.1s ease-out both}
+@keyframes hxRays{0%{transform:scale(.3) rotate(0);opacity:0}25%{opacity:.85}100%{transform:scale(1) rotate(50deg);opacity:0}}
+.hx-fx .flash{width:130%;aspect-ratio:1;margin:-65% 0 0 -65%;border-radius:50%;background:radial-gradient(closest-side,#fffbe0,#ffe36acc 45%,#ffe36a00);animation:hxFlash .55s ease-out both}
+@keyframes hxFlash{0%{transform:scale(.4);opacity:1}100%{transform:scale(1.1);opacity:0}}
+.hx-fx .ring{width:100%;aspect-ratio:1;margin:-50% 0 0 -50%;border-radius:50%;border:6px solid #ffd23a;box-shadow:0 0 12px #ffd23a;animation:hxRing .7s ease-out both}
+.hx-fx .ring.r2{border-color:#fff4dc;animation-delay:.14s}
+@keyframes hxRing{0%{transform:scale(.25);opacity:1}100%{transform:scale(1.5);opacity:0;border-width:1px}}
+.fxon{animation:hxPop .5s cubic-bezier(.3,1.6,.5,1);z-index:5} /* плитка открытого оружия */
+.hx-fx.tile .rays{width:420%;margin:-210% 0 0 -210%}.hx-fx.tile .flash{width:240%;margin:-120% 0 0 -120%}.hx-fx.tile .ring{width:130%;margin:-65% 0 0 -65%;border-width:4px}
+.hx-fx b{position:absolute;left:50%;top:30%;white-space:nowrap;font:900 30px Nunito,system-ui;color:#fff4dc;-webkit-text-stroke:3px #7a4a22;paint-order:stroke fill;animation:hxLvText 1.3s cubic-bezier(.2,1.2,.4,1) both}
+@keyframes hxLvText{0%{transform:translate(-50%,16px) scale(.4);opacity:0}22%{transform:translate(-50%,0) scale(1.15);opacity:1}70%{transform:translate(-50%,-10px) scale(1);opacity:1}100%{transform:translate(-50%,-34px) scale(1);opacity:0}}
+.hx-pips i.new{animation:hxPip .7s ease-out}
+@keyframes hxPip{0%{transform:scale(.5);filter:brightness(2.2)}40%{transform:scale(1.25);filter:brightness(1.7);box-shadow:0 0 12px #9cf25a}100%{transform:none;filter:none}}
+.hx-st.pop span,.hx-lvl span.pop{animation:hxStat .6s ease-out}
+@keyframes hxStat{35%{transform:scale(1.14)}}
+@media (prefers-reduced-motion:reduce){.fxon,.hx-pic.pop,.hx-pips i.new,.hx-st.pop span,.hx-lvl span.pop{animation:none}}
+.hx-plock{position:absolute;right:-8px;top:-8px;width:32px}
+.hx-arr{position:absolute;top:50%;width:var(--ar);height:var(--ar);margin-top:calc(var(--ar) / -2);border-radius:50%;border:3px solid #3a2518;background:radial-gradient(circle at 40% 35%,#fff3a8,#ffcc33 60%,#e29b12);
+ color:#3a2518;font:900 calc(var(--ar) * .42) Nunito,system-ui;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 0 #0005;padding:0;z-index:2}
+.hx-arr::after{content:"";position:absolute;inset:-8px;border-radius:50%} /* кнопка меньше, но по ней по-прежнему легко попасть пальцем */
+.hx-arr.l{left:0}.hx-arr.r{right:0}.hx-arr:active{transform:scale(.92)}
+.hx-dots{display:flex;gap:8px}.hx-dots i{width:14px;height:14px;border-radius:7px;background:#3a251840;border:2px solid #3a251866;cursor:pointer}
+.hx-dots i.lk{background:#3a251820}.hx-dots i.on{width:32px;background:#3a2518;border-color:#3a2518}
+.hx-r{display:flex;flex-direction:column;gap:10px;min-width:0}
+.hx-name{font-size:clamp(30px,3.6vw,46px);font-weight:900;line-height:1;text-transform:uppercase;color:#fff4dc;-webkit-text-stroke:3px #7a4a22;paint-order:stroke fill;letter-spacing:.5px}
+.hx-role{font-size:15px;font-weight:700;color:#7a5638;margin-top:-4px;line-height:1.3}.hx-role b{font-weight:900;color:#3a2518}
+.hx-lvl{display:flex;align-items:center;gap:12px;font-size:22px;font-weight:900;color:#3a2518}
+.hx-pips{display:flex;gap:4px;flex:1}.hx-pips i{flex:1;height:20px;border-radius:6px;background:#3a251826;border:2px solid #3a251855}
+.hx-pips i.f{background:linear-gradient(#9cf25a,#4cc531);border-color:#2c6b18;box-shadow:inset 0 3px 0 #ffffff55}
+.hx-st{display:grid;grid-template-columns:repeat(3,auto);justify-content:start;gap:clamp(10px,1.6vw,20px);font-size:clamp(16px,1.5vw,20px);font-weight:900;color:#3a2518}
+.hx-st span{display:flex;align-items:center;gap:5px;white-space:nowrap}.hx-st img{height:26px}.hx-st b{color:#2c8a18;font-size:.8em}
+.btn.hx-up{min-height:66px!important;font-size:24px!important;text-transform:uppercase;gap:10px;display:flex;align-items:center;justify-content:center;width:100%;margin:2px 0 0!important}
+.btn.y.hx-up b{background:#3a251822;border-radius:10px;padding:2px 10px}.btn.hx-up .ico{height:32px;box-sizing:content-box;padding:3px;border-radius:50%;background:#3a2518;box-shadow:0 0 0 2px #fff4dc} /* тёмный круг с кремовым ободком: золотая монета не сливается с жёлтой кнопкой */
+.btn.hx-up[disabled]{filter:saturate(.5) brightness(.9);opacity:1}
+.hx-max{text-align:center;font-size:22px;font-weight:900;color:#3a2518;background:linear-gradient(#fff6c8,#ffd75a);border:3px solid #3a2518;border-radius:16px;padding:14px;box-shadow:inset 0 -4px 0 #e0a52a}
+.hx-wl{font-size:17px;font-weight:800;color:#3a2518;margin-top:2px}.hx-wl b{font-weight:900}.hx-wl small{font-size:14px;color:#7a5638;font-weight:700;margin-left:4px}
+.hx-ws{display:grid;grid-template-columns:repeat(5,minmax(0,68px));justify-content:center;gap:16px 10px;margin:14px 12px 12px;border:16px solid transparent;border-image:url(assets/ui/ui_wpanel.png?v=20) 96 fill / 32px / 12px stretch;background:url(assets/ui/ui_wpanel.png?v=20) 0 0/100% 100% no-repeat border-box} /* общая подложка блока оружия: свиток цвета кнопки «Назад» */
+@media (min-width:1100px) and (min-height:501px){.hx-ws{grid-template-columns:repeat(5,minmax(0,64px))}}
+.hx-ws.off{opacity:.55;pointer-events:none}
+.hx-w{position:relative;aspect-ratio:1;border:9px solid transparent;border-image:url(assets/ui/ui_wtile.png?v=20) 28 fill / 9px stretch;background:none;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;
+ filter:drop-shadow(0 0 1px #2a1608) drop-shadow(0 3px 0 #3a251855);background:url(assets/ui/ui_wtile.png?v=20) 0 0/100% 100% no-repeat border-box}
+.hx-w .spi,.hx-w img:first-child{width:78%!important;height:78%!important;max-width:none!important;max-height:none!important;object-fit:contain}
+.hx-w.on{border-image-source:url(assets/ui/ui_wtile_sel.png?v=20);filter:drop-shadow(0 0 1px #2a1608) drop-shadow(0 0 9px #ffd23a);background:url(assets/ui/ui_wtile_sel.png?v=20) 0 0/100% 100% no-repeat border-box}
+.hx-w.lk .spi,.hx-w.lk img:first-child{filter:grayscale(1) opacity(.55)}
+.box.hxbox .hx-w .hx-tmp img.ico,.hx-w .hx-tmp img.ico{position:static!important;width:16px!important;height:16px!important;filter:none!important}
+.hx-tmp{position:absolute;right:-4px;top:-6px;font-style:normal;font-size:15px;display:flex;line-height:1;background:#ffd23a;border:2px solid #2a1608;border-radius:999px;padding:2px 3px;pointer-events:none}  /* v=486: временное оружие (проба за рекламу) */
+.hx-w .hx-lock{position:absolute!important;right:-10px;top:-12px;width:24px!important;height:auto!important;filter:none!important}
+.hx-pr{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);background:#ffcc33;border:2px solid #3a2518;border-radius:99px;padding:0 7px;font:900 13px Nunito,system-ui;color:#3a2518;font-style:normal;white-space:nowrap}
+.hx-pr.ad{background:#8a5cff;color:#fff}
+@media (max-width:720px){.hx{grid-template-columns:1fr}.hx-l{max-width:246px;margin:0 auto}.hx-name{text-align:center}.hx-role{text-align:center}}
+/* средняя высота (ноутбук с панелями браузера, окно Яндекса): оружие в один ряд, чтобы кнопки «Назад»/«Играть» помещались */
+@media (min-height:501px) and (max-height:680px) and (min-width:721px) and (orientation: landscape){.box.hxbox{max-height:98%}.hx{grid-template-columns:clamp(234px,calc(26vw + 44px),324px) 1fr;margin:0 4px 6px}.hx-l{max-width:none;margin:0;--ar:40px;--ag:8px}.hx-r{gap:6px}.hx-name{font-size:30px;text-align:left}.hx-role{font-size:14px;text-align:left}
+ .btn.hx-up{min-height:52px!important;font-size:20px!important}.hx-ws{grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;border-width:13px;margin:12px 12px 10px}.hx-w{border-width:6px;border-image-width:6px}
+ .hx-w .hx-lock{width:16px!important;right:-6px;top:-8px}.hx-pr{font-size:10px;bottom:-10px;padding:0 4px}}
+@media (max-height:500px){.box.hxbox{max-height:98%}.hx{grid-template-columns:214px 1fr;gap:12px;margin:0 2px 4px}.hx-l{--ar:32px;--ag:6px;gap:5px}.hx-pic{border-width:9px;border-image-width:9px}
+ .hx-name{font-size:24px;-webkit-text-stroke-width:2px}.hx-role{display:none}.hx-r{gap:6px}.hx-lvl{font-size:15px;gap:8px}.hx-pips i{height:11px;border-width:1.5px}
+ .hx-st{font-size:14px;gap:12px}.hx-st img{height:20px}.btn.hx-up{min-height:44px!important;font-size:17px!important;border-width:8px!important;border-image-width:8px!important;--bw:8px!important}.btn.hx-up .ico{height:22px}
+ .hx-wl{font-size:13px}.hx-wl small{display:none}.hx-ws{grid-template-columns:repeat(10,1fr);gap:4px;margin:8px 8px 8px;border-width:9px;border-image-width:21px;border-image-outset:8px}.hx-w{border-width:5px;border-image-width:5px}
+ .hx-w .hx-lock{width:13px!important;right:-5px;top:-6px}.hx-pr{font-size:9px;bottom:-9px;padding:0 3px;border-width:1.5px}
+ .hx-arr{border-width:2px}.hx-plock{width:24px;right:-5px;top:-5px}
+ .hx-dots{gap:5px}.hx-dots i{width:9px;height:9px}.hx-dots i.on{width:20px}.hx-sub{display:none}.box.hxbox .row2 .btn{min-height:38px!important;height:38px;font-size:16px!important;border-width:8px!important;border-image-width:8px!important;padding-top:0;padding-bottom:0;--bw:8px!important}.box.hxbox h3{font-size:17px;padding:5px 6px 10px;margin:0 auto 4px;min-width:40%}.box.hxbox{padding-top:0;padding-bottom:0;border-width:12px;border-image-width:12px}.box.hxbox .row2{margin-top:2px}}
+@media (max-height:340px){.hx-name{font-size:20px}.hx-r{gap:4px}.btn.hx-up{min-height:36px!important;font-size:15px!important}.box.hxbox .row2 .btn{min-height:32px!important;height:32px;font-size:14px!important}.box.hxbox h3{font-size:15px;padding:3px 6px 8px;margin-bottom:2px}}
+/* вертикальный экран: кнопки заметно меньше, окно помещается без прокрутки. Идёт после правил по высоте и перекрывает их */
+@media (max-aspect-ratio:999/1000) and (max-width:900px){
+ .hx-l{--ar:38px;--ag:8px}.hx-arr{border-width:2px;box-shadow:0 2px 0 #0005}.hx-arr::after{inset:-6px}.hx-plock{width:22px;right:-5px;top:-5px}
+ .btn.hx-up{min-height:44px!important;font-size:17px!important;gap:7px;border-width:8px!important;border-image-width:8px!important;padding-top:0;padding-bottom:0;--bw:8px!important}.btn.hx-up .ico{height:20px;padding:2px}.btn.y.hx-up b{padding:0 8px}
+ .box.hxbox .row2 .btn{min-height:40px!important;height:40px;font-size:16px!important;border-width:8px!important;border-image-width:8px!important;padding-top:0;padding-bottom:0;--bw:8px!important}.box.hxbox .row2{margin-top:4px}
+ .hx-ws{grid-template-columns:repeat(5,minmax(0,46px));gap:10px 8px;border-width:13px;margin:4px 6px 4px}.hx-w{border-width:6px;border-image-width:6px}
+ .hx-w .hx-lock{width:16px!important;right:-6px;top:-8px}.hx-pr{font-size:10px;bottom:-10px;padding:0 4px}
+ .hx-max{font-size:17px;padding:8px}.hx-r{gap:7px}
+}
+@media (max-aspect-ratio:999/1000) and (max-width:720px){.hx{grid-template-columns:1fr;gap:8px;margin:0 4px 6px}.hx-l{max-width:238px;margin:0 auto;gap:6px}.hx-name{text-align:center}.hx-role{text-align:center}.hx-st{font-size:15px;gap:8px;justify-content:center}.hx-st img{height:22px}.hx-st span{gap:3px}}
+@media (max-aspect-ratio:999/1000) and (max-width:720px) and (max-height:680px){.box.hxbox{max-height:98%}.box.hxbox h3{font-size:18px;padding:5px 6px 10px;margin:0 auto 4px;min-width:40%}.hx-l{max-width:180px;--ar:34px;--ag:6px}.hx-pic{border-width:9px;border-image-width:9px}.hx-dots{gap:5px}.hx-dots i{width:9px;height:9px}.hx-dots i.on{width:20px}
+ .hx-name{font-size:24px;-webkit-text-stroke-width:2px}.hx-role{font-size:13px}.hx-lvl{font-size:16px;gap:8px}.hx-pips i{height:12px;border-width:1.5px}.hx-st{font-size:14px;gap:10px;justify-content:center}.hx-st img{height:20px}.hx-wl{font-size:14px}.hx-wl small{font-size:12px}.hx-sub{display:none}
+ .btn.hx-up{min-height:40px!important;font-size:16px!important}.box.hxbox .row2 .btn{min-height:36px!important;height:36px;font-size:15px!important}.hx-ws{grid-template-columns:repeat(5,minmax(0,38px));gap:8px 6px}.hx-w{border-width:5px;border-image-width:5px}.hx-max{font-size:15px;padding:6px;line-height:1.1;white-space:nowrap;border-radius:12px}}
+@media (max-aspect-ratio:999/1000) and (max-width:720px) and (max-height:600px){.hx-role{display:none}.hx-l{max-width:152px;--ar:30px;--ag:6px;gap:4px}.hx-r{gap:5px}.hx{gap:5px}.hx-ws{grid-template-columns:repeat(5,minmax(0,34px));gap:7px 6px;border-width:11px;border-image-width:18px;border-image-outset:6px}.box.hxbox h3{font-size:16px;padding:3px 6px 8px;margin-bottom:2px}.box.hxbox{padding-top:0;padding-bottom:0}.btn.hx-up{min-height:36px!important;font-size:15px!important}.box.hxbox .row2 .btn{min-height:34px!important;height:34px;font-size:14px!important}.hx-max{font-size:13px}}
+/* окно настроек */
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:10px 0;padding:10px 14px;background:#3a25180f;border-radius:14px}
+.setrow>span{font-size:20px;font-weight:900;color:#3a2518}.setrow>span small{display:block;font-size:13px;font-weight:700;color:#7a5638}
+.setrow .btn{margin:0;min-width:130px}.setrow .seg{display:flex;gap:8px}
+/* модификаторы уровня — чипсы под плашкой задания */
+#mods{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:4px}#mods:empty{display:none}
+#mods span{background:#3a2518e6;color:#ffe27a;border:2px solid #ffffff30;border-radius:99px;padding:2px 10px 3px;font-size:13px;font-weight:800;white-space:nowrap}
+/* кнопка атаки есть всегда; с оружием на ней его иконка */
+#controls button.atk.gun{display:block;border-radius:50%;background:var(--wi) center/62% no-repeat,radial-gradient(circle at 50% 35%,#ff8a6a,#e2452e 60%,#a92a1a);box-shadow:0 0 0 4px #a52c1c,0 5px 0 4px #7a2a1a55,inset 0 -6px 0 #0002}
+#controls button.atk.gun.on{transform:scale(.9);filter:brightness(1.2)}
+/* =================== Карточки режимов: текст по центру свободной части; узкие и низкие экраны =================== */
+.mode{align-items:center;text-align:center}
+.mode span{width:100%}
+.mode small{white-space:nowrap}
+/* колонка инструментов песочницы не заходит на нижнюю панель: переносится во второй столбец */
+#tools{flex-wrap:wrap;align-content:flex-start;max-height:calc(100% - 88px - var(--bh,110px))}
+@media (max-height:620px){#tools{max-height:calc(100% - 76px - var(--bh,110px))}}
+/* очень низкий экран (телефон боком): карточки в ряд и компактнее, логотип меньше */
+@media (max-height:420px){
+ #menu .logo{height:min(130px,33vh)}
+ .mcenter{gap:8px;margin-top:-30px}
+ .modes{flex-direction:row!important;flex-wrap:nowrap;width:min(1040px,96vw);gap:10px}
+ .mode{flex:1 1 0!important;width:auto!important;height:86px;font-size:clamp(14px,2.6vw,20px)!important;border-width:16px 14px 16px 60px;border-image-width:16px 14px 16px 60px;--bt:16px;--br:14px;--bl:60px}
+ .mode b{left:-54px;top:-6px;width:54px;height:54px}
+ .mode small{font-size:clamp(10px,1.5vw,13px)!important;-webkit-text-stroke:2px #7a4a22;white-space:normal}
+ .coins{width:150px;height:46px;font-size:19px;padding-left:56px}
+ #top .ib,.mtop .ib{width:44px;height:44px}.mtop .ib .ico{height:28px}
+}
+/* =================== Как на референсе «Солнечный огород»: монета на краю плашки, крупные надписи режимов =================== */
+.coins{justify-content:center;padding:0 12px 4px 58px!important;margin-left:10px}
+#top .coins,.box .coins{padding-left:50px!important}
+.coins .ico{left:-7%!important;top:-9%!important;height:118%!important;width:auto;filter:drop-shadow(0 2px 0 #3a251855)}
+/* число — по центру видимой светлой части плашки (ui_coinbar: светлое x 12.5–90%, y 31–69%; монета закрывает до ~29%) */
+.coins .cv{position:absolute;left:29%;right:10%;top:0;bottom:0;display:flex;align-items:center;justify-content:center;line-height:1;padding-top:.06em;font-variant-numeric:tabular-nums;letter-spacing:.5px;white-space:nowrap}
+.mode small{display:none}
+.mode span{text-transform:uppercase;font-weight:900;letter-spacing:.5px;font-size:1.08em}
+.mode b{transform:scale(1.12)}
+@media (max-height:330px){
+ #menu .logo{height:70px}.mcenter{margin-top:-14px}
+ .mode{height:72px}.mode b{width:46px;height:46px;left:-50px}
+ #tools{flex-direction:row;flex-wrap:nowrap;max-height:none;left:auto;right:8px;top:56px}
+ #tip{font-size:14px;top:46px}
+}
+/* низкий экран песочницы: колонка инструментов переносится в несколько столбцов (минимум одна кнопка в высоту) */
+@media (max-height:440px){#tools{top:58px;gap:5px;max-height:max(44px,calc(100% - 64px - var(--bh,110px)))}#tools .ib{width:40px;height:40px}#tools .ib .ico{height:26px}}
+@media (max-height:440px){.it{width:68px;height:70px;font-size:11px}.it b{height:32px}.it b .spi{max-height:32px;max-width:44px}.cat{font-size:13px;padding:1px 8px}.cat .ico{height:18px}#tip{font-size:14px;max-width:min(520px,70%)}}
+.btn.y.sm,.btn.y{-webkit-text-stroke:0;color:#3a2518}
+.mx{font-size:15px;font-weight:900;color:#fff;background:#4fae2c;border:3px solid #2c6b18;border-radius:20px;padding:5px 14px;text-shadow:0 2px 0 #2c6b18}
+/* полоса здоровья: круглый портрет + толстая полоса с бликом; белый «след урона» догоняет её; мало здоровья — красная и мигает.
+   Всё в единицах --u, чтобы на низких экранах просто уменьшить. */
+.hp{--u:1px;width:calc(380*var(--u))!important;height:calc(84*var(--u))!important;background:none!important}
+.hp #hpico{left:0!important;top:0!important;width:calc(84*var(--u))!important;height:calc(84*var(--u))!important;z-index:2;box-sizing:border-box;border-radius:50%;
+ border:calc(5*var(--u)) solid #3a2518;background:radial-gradient(circle at 50% 38%,#fffbe9,#f6dca2 70%,#e9b866);box-shadow:inset 0 0 0 calc(4*var(--u)) #f0a53f,0 calc(4*var(--u)) 0 #0005;overflow:hidden}
+.hp #hpico img{position:absolute;left:4%;top:6%;width:92%;height:92%;object-fit:contain}
+#hpbar{left:calc(60*var(--u))!important;right:0!important;width:auto!important;top:calc(20*var(--u))!important;height:calc(44*var(--u))!important;box-sizing:border-box;
+ background:#3a2518!important;border-radius:99px!important;padding:calc(5*var(--u)) calc(6*var(--u)) calc(5*var(--u)) calc(28*var(--u));box-shadow:0 calc(4*var(--u)) 0 #0005;overflow:visible!important}
+#hpbar .trk{position:relative;display:block;height:100%;border-radius:99px;background:linear-gradient(#25150b,#4a2c16);box-shadow:inset 0 calc(3*var(--u)) 0 #0006;overflow:hidden}
+#hpbar .trk>i,#hpbar .trk>em{position:absolute;left:0;top:0;bottom:0;display:block;border-radius:99px;min-width:0}
+#hpbar .trk>em{background:#fff6c8;transition:width .5s ease .35s}
+#hpbar .trk>i{background:linear-gradient(#b6f76a,#5cd23a 50%,#36a524)!important;box-shadow:inset 0 calc(-4*var(--u)) 0 #0002,inset 0 0 0 calc(2*var(--u)) #ffffff30!important;transition:width .15s}
+#hpbar .trk>.gl{position:absolute;left:calc(8*var(--u));right:calc(8*var(--u));top:calc(5*var(--u));height:calc(7*var(--u));border-radius:99px;background:#ffffff55;pointer-events:none}
+#hpbar.low .trk>i{background:linear-gradient(#ff9a7a,#f2452e 50%,#c22a1a)!important;animation:hpLow .7s ease-in-out infinite alternate}
+@keyframes hpLow{to{filter:brightness(1.35)}}
+.hp.hit #hpico{animation:hpHit .25s}
+@keyframes hpHit{40%{transform:scale(1.12) rotate(-6deg)}}
+#hpnum{left:calc(88*var(--u))!important;right:calc(6*var(--u))!important;width:auto!important;top:calc(20*var(--u))!important;height:calc(44*var(--u))!important;display:flex;align-items:center;justify-content:center;gap:2px;line-height:1;
+ font-size:calc(22*var(--u))!important;font-weight:900;color:#fff;-webkit-text-stroke:calc(2*var(--u)) #7a4a22;paint-order:stroke fill;text-shadow:none;z-index:1}
+#hpnum small{font-size:.7em;opacity:.9}
+#ammo{left:calc(92*var(--u))!important;top:calc(70*var(--u))!important}
+@media (max-height:560px){.hp{--u:.8px}}
+@media (max-height:420px){.hp{--u:.66px}}
+/* =================== Герои и оружие: карточки как на референсе =================== */
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:4px 2px}
+.hcard{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 4px 4px;border:14px solid transparent;border-image:url(assets/ui/ui_card.png?v=21) 28 fill / 14px stretch;cursor:pointer;transition:transform .08s;background:url(assets/ui/ui_card.png?v=21) 0 0/100% 100% no-repeat border-box}
+.hcard:active{transform:scale(.97)}
+.hcard.sel{border-image-source:url(assets/ui/ui_card_sel.png?v=21);filter:drop-shadow(0 0 6px #ffd23a);background:url(assets/ui/ui_card_sel.png?v=21) 0 0/100% 100% no-repeat border-box}
+.hpic{position:relative;width:100%;aspect-ratio:1/0.82;display:flex;align-items:flex-end;justify-content:center;border-radius:12px;background:radial-gradient(circle at 50% 60%,#fff4dc 0,#f4d9a8 55%,#e2b77a 100%);overflow:hidden}
+.hpic .por{width:92%;height:auto;max-height:100%;object-fit:contain;display:block}
+.hcard.wpn .hpic{align-items:center}.hcard.wpn .hpic .spi{width:70%!important;height:70%!important;max-width:none!important;max-height:none!important;object-fit:contain}
+.hcard.lock .hpic>*:not(.hlv){filter:grayscale(.85) brightness(.55)}
+.hcard.lock .hpic::after{content:"";position:absolute;right:6px;top:6px;width:30px;height:30px;background:url(assets/ui/icon_lock.png?v=2) center/contain no-repeat}
+.hlv{position:absolute;left:6px;top:6px;min-width:30px;height:30px;padding:0 6px;border-radius:15px;background:#ffcc33;border:3px solid #3a2518;color:#3a2518;font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.hname{width:100%;box-sizing:border-box;text-align:center;padding:5px 18px 7px;background:url(assets/ui/ui_nameplate.png?v=20) center/100% 100% no-repeat;color:#3a2518;font-size:17px;font-weight:900;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hsub{font-size:13px;font-weight:700;color:#5a3a22;text-align:center;min-height:17px;line-height:1.25}
+.hcard .btn{width:100%;margin:0;min-height:44px;font-size:16px;text-transform:uppercase}
+.hcard .mx{margin:4px 0;align-self:center}
+.hdet{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start}
+.hdet .hcard{cursor:default}
+.hdr{display:flex;flex-direction:column;gap:8px}
+.wlab{font-weight:900;font-size:16px;color:#3a2518}
+.hback{align-self:flex-start;margin-top:10px}
+@media (max-width:620px){.hdet{grid-template-columns:1fr}.hdet .hcard{max-width:220px;margin:0 auto}.hgrid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr))}}
+@media (max-height:440px){.hgrid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}.hpic{aspect-ratio:1/0.7}.hname{font-size:14px}.hsub{display:none}.hcard .btn{min-height:36px;font-size:13px}.hdet{grid-template-columns:150px 1fr}}
+.hname{font-size:clamp(12px,1.25vw,16px);padding:5px 12px 7px;letter-spacing:0;text-overflow:clip}
+.hsub{min-height:34px;display:flex;align-items:center;justify-content:center}
+/* читаемость карточек героев/оружия: без светлой таблички — имя крупным светлым текстом с обводкой, роль светлее;
+   карточка отделена от окна контуром и тенью */
+.hname{background:none!important;padding:2px 2px 0!important;color:#fff4dc!important;font-size:clamp(14px,1.4vw,19px)!important;-webkit-text-stroke:2px #7a4a22;paint-order:stroke fill;letter-spacing:.4px!important;overflow:visible!important}
+.hsub{color:#ffe2ac!important;font-size:14px!important;font-weight:800!important;-webkit-text-stroke:2px #7a4a22;paint-order:stroke fill;min-height:24px!important}
+.hcard{filter:drop-shadow(0 0 1.5px #2a1608) drop-shadow(0 5px 0 #3a251855)}
+.hcard.sel{filter:drop-shadow(0 0 1.5px #2a1608) drop-shadow(0 0 12px #ffd23a) drop-shadow(0 5px 0 #3a251855)}
+.hpic{box-shadow:inset 0 0 0 3px #3a251833,inset 0 -6px 12px #b0743a44}
+@media (max-height:440px){.hname{font-size:14px!important;-webkit-text-stroke:2px #7a4a22}}
+.hcard .btn,.hcard .mx{margin-top:auto}
+.hdr .wsel{display:flex;flex-wrap:wrap;gap:8px}
+.hdr .wch{width:60px;height:60px;border:10px solid transparent;border-image:url(assets/ui/ui_card.png?v=21) 28 fill / 10px stretch;background:none;padding:0;display:flex;align-items:center;justify-content:center;background:url(assets/ui/ui_card.png?v=21) 0 0/100% 100% no-repeat border-box}
+.hdr .wch.on{border-image-source:url(assets/ui/ui_card_sel.png?v=21);background:url(assets/ui/ui_card_sel.png?v=21) 0 0/100% 100% no-repeat border-box}
+.hdr .wch .spi,.hdr .wch img{max-width:38px!important;max-height:38px!important}
+
+/* Оружие: крупные иконки, три плитки и отдельные состояния. */
+.wpgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:4px 2px}
+.wp-owner{margin:2px 0 8px!important;text-align:left;font-size:13px!important}
+.wp-card{display:flex;flex-direction:column;align-items:stretch;gap:7px;min-width:0;padding:3px;border:16px solid transparent;border-image:url(assets/ui/ui_wpn_card.png?v=20) 40 fill / 16px stretch;box-sizing:border-box;text-align:center;background:url(assets/ui/ui_wpn_card.png?v=20) 0 0/100% 100% no-repeat border-box}
+.wp-card.selected{border-image-source:url(assets/ui/ui_wpn_card_sel.png?v=20);background:url(assets/ui/ui_wpn_card_sel.png?v=20) 0 0/100% 100% no-repeat border-box}
+.wp-card.locked{border-image-source:url(assets/ui/ui_wpn_card_lock.png?v=20);background:url(assets/ui/ui_wpn_card_lock.png?v=20) 0 0/100% 100% no-repeat border-box}
+.wp-picture{height:130px;display:flex;align-items:center;justify-content:center;position:relative}
+.wp-picture::before{content:"";position:absolute;width:112px;height:112px;border-radius:50%;background:#fff4dc;border:2px solid #d8b988}
+.wp-picture .spi{position:relative;width:95%!important;height:95%!important;max-width:none!important;max-height:none!important;object-fit:contain}
+.wp-name{background:url(assets/ui/ui_nameplate.png?v=20) center/100% 100% no-repeat;padding:7px 4px 9px;color:#3a2518;font-weight:900;font-size:clamp(12px,1.4vw,16px);text-transform:uppercase;line-height:1.15}
+.wp-stats{display:flex;flex-direction:column;gap:5px}
+.wstat{display:grid;grid-template-columns:16px 1fr 58px 28px;align-items:center;gap:3px;min-width:0;font-size:11px;color:#51351f}
+.wstat>img{width:16px;height:16px;object-fit:contain}.wstat-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.wstat-pips{display:flex;gap:2px;height:11px}.wstat-pips i{flex:1;background:url(assets/ui/ui_stat_segment_empty.png?v=20) center/100% 100% no-repeat}.wstat-pips i.full{background-image:url(assets/ui/ui_stat_segment_full.png?v=20)}
+.wstat b{font-size:11px;text-align:right}.wp-action{display:flex;align-items:center;justify-content:center;min-height:40px;margin-top:auto}
+.wp-action>.btn{width:100%;margin:0;min-height:38px;padding:3px 1px;font-size:13px;line-height:1.1}
+.wp-action>.btn.y{border-image:none;border:0;background:url(assets/ui/ui_price_tag.png?v=20) center/100% 100% no-repeat!important;color:#3a2518;padding-left:18px;-webkit-text-stroke:0;text-shadow:none}
+.wp-owned{display:flex;align-items:center;justify-content:center;width:100%;min-height:34px;background:url(assets/ui/ui_badge_owned.png?v=20) center/100% 100% no-repeat;padding-left:46px;padding-right:5px;box-sizing:border-box;font-weight:900;font-size:10px;color:#fff4dc;text-shadow:0 1px #26431e}
+#ammo{gap:3px;align-items:center}#ammo i.ammo-round{display:block;width:10px;height:20px;background:url(assets/ui/ui_ammo_full.png?v=20) center/contain no-repeat;box-shadow:none;flex-shrink:0;filter:none}
+#ammo i.ammo-round.empty{background-image:url(assets/ui/ui_ammo_empty.png?v=20)}
+#ammo i.ammo-round.grenade{width:16px;background-image:url(assets/ui/ui_ammo_grenade.png?v=20)}#ammo i.ammo-round.rocket{width:24px;background-image:url(assets/ui/ui_ammo_rocket.png?v=20)}
+#ammo i.ammo-round.grenade.empty,#ammo i.ammo-round.rocket.empty{opacity:.25;filter:grayscale(1)}
+/* копьё, стрела, нож — свои иконки боезапаса (tools/make_ammo_icons.py) */
+#ammo i.ammo-round.spear{width:8px;background-image:url(assets/ui/ui_ammo_spear.png?v=1)}#ammo i.ammo-round.arrow{width:7px;background-image:url(assets/ui/ui_ammo_arrow.png?v=1)}#ammo i.ammo-round.knife{width:9px;background-image:url(assets/ui/ui_ammo_knife.png?v=1)}
+#ammo i.ammo-round.spear.empty,#ammo i.ammo-round.arrow.empty,#ammo i.ammo-round.knife.empty{opacity:.25;filter:grayscale(1)}
+/* вертикальный экран: HUD в два ряда, кнопки по ширине экрана */
+@media (max-aspect-ratio:999/1000) and (max-width:900px){
+ #hud{flex-wrap:wrap;gap:6px;left:8px;right:8px;top:max(8px,env(safe-area-inset-top))}
+ #hud .hp{--u:.58px;flex:1 1 0;width:auto!important;min-width:0}
+ #hud .grp{order:2;flex:none}#hud .ib{width:48px;height:48px}#hud .ib .ico{height:30px}
+ #hud .obj{order:3;flex:0 0 100%;text-align:center}#lvname{font-size:13px}
+ .obj #obj{font-size:14px;min-width:0;padding:5px 16px 8px;border-width:0 22px;border-image-width:0 22px}.obj #obj .ico{height:16px;vertical-align:-3px}
+ #tip{top:clamp(120px,17vh,170px)!important;width:82vw;max-width:440px!important;box-sizing:border-box;font-size:15px!important;padding:9px 12px 10px 50px!important}
+ #tip::before{width:56px;height:56px;margin-top:-28px;left:-12px}
+ #controls{padding:0 8px max(10px,env(safe-area-inset-bottom))}#controls .cl,#controls .cr{gap:8px}
+ #controls button{width:min(21vw,104px);height:min(21vw,104px)}#controls button.atk{width:min(23vw,120px);height:min(23vw,120px)}
+ #top{flex-wrap:wrap;gap:8px;align-items:flex-start}#top .grp{flex-wrap:nowrap}#top .coins,.mtop .coins{width:146px;height:46px;font-size:19px}
+ #top .grp:last-child{flex:0 0 100%;justify-content:flex-end;gap:6px}#top .grp:last-child .ib{width:44px;height:44px}#top .grp:last-child .ib .ico{height:28px}
+ #tools{top:126px;max-height:calc(100% - 132px - var(--bh,110px))}
+ .mtop .ib{width:50px;height:50px}.mtop .ib .ico{height:32px}
+}
+@media (max-aspect-ratio:999/1000) and (max-width:520px){.lv{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.reload-hud{position:relative;display:inline-flex;width:32px;height:32px;align-items:center;justify-content:center;background:url(assets/ui/ui_reload_ring.png?v=20) center/contain no-repeat}
+.reload-hud .spi{width:18px!important;height:18px!important;max-width:18px!important;max-height:18px!important;object-fit:contain;position:relative;z-index:1}
+#ammo .reload-progress{position:absolute;inset:2px;width:auto;height:auto;border-radius:50%;background:conic-gradient(#ffcc33 var(--reload-angle),transparent 0);mask:radial-gradient(transparent 53%,#000 56%);-webkit-mask:radial-gradient(transparent 53%,#000 56%)}
+@media(max-width:600px){.wpgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.wp-picture{height:108px}.wp-picture::before{width:94px;height:94px}}
+@media(max-height:440px){.wpgrid{gap:8px}.wp-card{border-width:12px;border-image-width:12px;gap:4px}.wp-picture{height:92px}.wp-picture::before{width:80px;height:80px}.wstat{grid-template-columns:14px 1fr 48px 25px;font-size:10px}.wstat>img{width:14px;height:14px}.wstat b{font-size:10px}.wp-name{font-size:12px;padding:5px 2px 7px}.wp-action>.btn{min-height:34px;font-size:12px}}
+
+.toast{-webkit-text-stroke:0;text-shadow:none}
+/* карточки оружия: читаемые характеристики и единые кнопки (зелёная «Выбрать», жёлтая цена, фиолетовая «Открыть», плашка «В руках») */
+.wstat{grid-template-columns:18px max-content minmax(30px,1fr) 32px;gap:5px;font-size:13px;font-weight:800;color:#3a2518}.wstat-name{overflow:visible!important}
+.wstat>img{width:18px;height:18px}.wstat b{font-size:14px;font-weight:900;color:#3a2518}
+.wstat-pips{height:12px}
+.wp-action{min-height:48px}
+.wp-action>.btn,.wp-action>.btn.y{width:100%;margin:0;min-height:46px;padding:0 6px;font-size:17px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;line-height:1;
+ border:10px solid transparent!important;border-image-width:10px!important;border-image-slice:24 fill!important;border-image-repeat:stretch!important;display:flex;align-items:center;justify-content:center;gap:6px;--bw:10px!important}
+.wp-action>.btn.y{border-image-source:url(assets/ui/ui_btn_yellow.png?v=20)!important;color:#3a2518;-webkit-text-stroke:0;text-shadow:0 1px 0 #ffffff88;padding-left:6px!important;background:url(assets/ui/ui_btn_yellow.png?v=20) 0 0/100% 100% no-repeat border-box!important}
+.wp-action>.btn.y>.ico{position:static!important;transform:none!important;width:24px!important;height:24px!important;flex:none}
+.wp-action>.btn.y[disabled]{filter:saturate(.5) brightness(.92);opacity:1}
+.wp-action>.btn.g{border-image-source:url(assets/ui/ui_btn_green.png?v=20)!important;color:#fff4dc;-webkit-text-stroke:2px #2c6b18;paint-order:stroke fill;text-shadow:none;background:url(assets/ui/ui_btn_green.png?v=20) 0 0/100% 100% no-repeat border-box!important}
+.wp-action>.btn.ad{border-image-source:url(assets/ui/ui_btn_ad.png?v=20)!important;color:#fff;-webkit-text-stroke:2px #4a1f80;paint-order:stroke fill;text-shadow:none;background:url(assets/ui/ui_btn_ad.png?v=20) 0 0/100% 100% no-repeat border-box!important}
+.wp-action>.btn.ad .ico{width:22px;height:22px}
+.wp-owned{min-height:46px;background:linear-gradient(#fff6c8,#ffd75a)!important;border:3px solid #3a2518;border-radius:14px;padding:0 6px!important;font-size:17px!important;font-weight:900;color:#3a2518!important;text-shadow:none!important;text-transform:uppercase;box-shadow:inset 0 -4px 0 #e0a52a,0 3px 0 #0004}
+@media(max-height:440px){.wstat{grid-template-columns:15px 1fr 48px 30px;font-size:11px}.wstat b{font-size:12px}.wp-action>.btn,.wp-action>.btn.y,.wp-owned{min-height:38px;font-size:14px!important}}
+.wp-action>.btn.y{position:relative;padding-left:32px}.wp-action>.btn.y>.ico{position:absolute;left:20%;top:50%;transform:translate(-50%,-50%);width:24px!important;height:24px!important;object-fit:contain}
+.hx-rec{display:flex;align-items:center;justify-content:center;gap:12px;font-weight:800;color:#3a2518;margin:-2px 0 8px}.hx-rec b{font-size:1.25em;color:#c8650c}.hx-rec .btn{margin:0;min-height:34px;padding:0 10px;font-size:14px;border-width:7px;border-image-width:7px;--bw:7px}
+.box.hxbox{position:relative}
+@media (max-height:500px){.hx-rec{position:absolute;right:6px;top:2px;margin:0;gap:6px;font-size:12px}.hx-rec .btn{min-height:24px;font-size:11px;padding:0 4px;border-width:5px;border-image-width:5px;--bw:5px}} /* на низком экране рекорд в углу, рядом с заголовком: не занимает высоту */
+@media (max-height:380px){.hx-ws{margin:6px 8px 5px}.hx-r{gap:4px}}
+.coinfx{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden}.coinfx>img{position:absolute;left:0;top:0;width:34px;height:34px;filter:drop-shadow(0 2px 0 #3a251866)}
+.coinfx>.coins{position:absolute;left:10px;top:10px}
+.coins.got{animation:coinGot .22s ease-out}
+@keyframes coinGot{40%{transform:scale(1.13);filter:brightness(1.25)}}
+/* значок типа уровня: иконка игры на светлом круге с тёмным контуром */
+.lvc .ty{top:3px;left:3px;width:34px;height:34px;padding:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:50%;border:3px solid #3a2518;background:radial-gradient(circle at 40% 32%,#fffbe9,#fff4dc 55%,#f0d49c);box-shadow:0 2px 0 #3a251866}
+.lvc .ty .ico{height:22px;width:auto;vertical-align:0}
+@media (max-height:500px){.lvc .ty{width:28px;height:28px;border-width:2px}.lvc .ty .ico{height:18px}}
+/* кубок победы: мягкие лучи растворяются к краю и целиком помещаются в окне */
+.emb{width:118px;height:118px;margin:30px auto 4px}
+.emb::before{content:"";position:absolute;left:50%;top:50%;width:178px;height:178px;margin:-89px 0 0 -89px;border-radius:50%;z-index:-1;pointer-events:none;
+ background:radial-gradient(closest-side,#fff7bf 0,#ffe36acc 36%,#ffe36a00 70%),repeating-conic-gradient(#ffcf2e 0 11deg,#ffcf2e00 17deg 30deg);-webkit-mask:radial-gradient(closest-side,#000 48%,#0000);mask:radial-gradient(closest-side,#000 48%,#0000);animation:spin 14s linear infinite}
+@media (max-height:520px){.emb{width:74px;height:74px;margin:18px auto 0}.emb::before{width:112px;height:112px;margin:-56px 0 0 -56px}}
+@media (prefers-reduced-motion:reduce){.emb::before{animation:none}}
+.btn .ico,.btn.ad .ico{height:1.8em;width:auto;vertical-align:-.45em}
+#tip .ico,.toast .ico,#hud .obj .ico,.box p .ico,.box h3 .ico,.legend .ico{height:1.55em;vertical-align:-.38em}
+#mGift .gt{border:3px solid #a8743f;box-shadow:0 3px 6px #5c341844}#mGift.ready .gt{border-color:#2f7a1a}#mGift .gb,#mGift.ready .gb{filter:drop-shadow(0 5px 6px #5c341855)}
+.box .big:not(.stars) .ico{height:2.2em;vertical-align:middle}
+.hx-name{color:#8a4a18;-webkit-text-stroke:0;text-shadow:0 2px 4px rgba(138,74,24,.25)}
+#rotate b{font-size:clamp(24px,6vw,38px)}
+/* управление на экране: на компьютере клавиши и кнопка удара, на телефоне джойстик и кнопка удара */
+#joy{position:relative;opacity:.72;transition:opacity .12s;width:136px;height:136px;background:url(assets/ui/ui_joy_base.png?v=20) center/contain no-repeat;touch-action:none;-webkit-user-select:none;user-select:none}
+#joy.on{opacity:1}
+#joy i{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px 0 0 -31px;background:url(assets/ui/ui_joy_knob.png?v=20) center/contain no-repeat;transform:translate(var(--jx,0),var(--jy,0));pointer-events:none}
+#controls .keys{display:flex;gap:6px;align-items:flex-end}
+#controls .keys button[data-k]{width:62px;height:62px;border-radius:14px;background-image:url(assets/ui/ui_key.png?v=20);font:900 28px Nunito,system-ui;color:#6b3d1a;padding:0 0 12%;line-height:1}
+#controls .keys button[data-k=left]{order:1}#controls .keys button[data-k=jump]{order:2}#controls .keys button[data-k=right]{order:3}
+#controls button.atk{position:relative;display:block}
+.kh{position:absolute;right:-6px;bottom:-4px;width:38px;height:38px;background:url(assets/ui/ui_key.png?v=20) center/contain no-repeat;font:900 18px/30px Nunito,system-ui;color:#6b3d1a;text-align:center;display:none;font-style:normal;pointer-events:none}
+@media (hover:hover) and (pointer:fine){#joy{display:none}.kh{display:block}#controls button.atk,#controls button.atk.gun{width:68px;height:68px}.kh{width:28px;height:28px;right:-5px;bottom:-3px;font-size:13px;line-height:22px}}
+@media not all and (hover:hover) and (pointer:fine){#controls .keys{display:none}}
+@media (max-height:500px){#joy{width:112px;height:112px}#joy i{width:52px;height:52px;margin:-26px 0 0 -26px}#controls .keys button[data-k]{width:46px;height:46px;font-size:21px}#controls button.atk,#controls button.atk.gun{width:84px;height:84px}}
+@media (hover:hover) and (pointer:fine) and (max-height:500px){#controls button.atk,#controls button.atk.gun{width:56px;height:56px}}
+/* выбор команды в ряду вкладок; панель предметов под вкладками, без наложения */
+#bottom .teams{position:static;margin:0 0 0 auto;padding:3px 8px 3px 12px;background:#6b3d1a;border:0;box-shadow:inset 0 2px 4px #0003}
+#bottom .tm{border:2px solid #fff4dc99;box-shadow:none}#bottom .tm.on{border-color:#fff;box-shadow:0 0 0 2px #ffcc33}
+#cats{padding-bottom:6px}
+#items{margin:0 6px 6px!important;padding-top:8px!important}
+@media (max-width:900px){#bottom .teams span{display:none}#bottom .teams{padding:3px 6px;gap:4px}#bottom .tm{flex:none;width:22px;height:22px;padding:0}.cat{padding:1px 5px}}
+/* подложка против швов рамок: у фигур с хвостиком, лентами и кругом только внутри, иначе проступает лишний контур */
+.dtxt,#tip,.toast,#bottom{background-clip:padding-box;background-origin:padding-box}
+/* лента: под швами между хвостами и серединой лежит полоса цвета ленты, чуть шире середины */
+.box h3,.obj #lvname{background:linear-gradient(transparent 3%,#ee4b39 3%,#f94d3a 40%,#f43d30 72%,transparent 72%) center/calc(100% + 6px) 100% no-repeat padding-box border-box}
+/* подложка карточек меню: та же картинка, нарезанная по другим линиям. Стыки верхней рамки ложатся на цельные участки подложки, поэтому при дробном масштабе и увеличении кнопки линий нет */
+.mode[data-m=sandbox],.mode[data-m=story],.mode[data-m=arcade]{background:none}
+.mode{--bt:24px;--br:24px;--bl:84px;isolation:isolate}
+/* на низком экране рамка кнопки тоньше — подложка должна совпадать с ней, иначе кнопки вылезают за края */
+@media (max-height:420px){.mode{--bt:16px;--br:14px;--bl:60px}}
+.mode::after{content:"";position:absolute;top:calc(-1*var(--bt));right:calc(-1*var(--br));bottom:calc(-1*var(--bt));left:calc(-1*var(--bl));z-index:-1;pointer-events:none;border-image-source:inherit;border-image-slice:32 32 32 150 fill;border-image-width:calc(var(--bt)*32/38) calc(var(--br)*32/38) calc(var(--bt)*32/38) calc(var(--bl)*150/134);border-image-repeat:stretch}
+/* при наведении элемент масштабируется как единая картинка, швы между кусками рамки не появляются */
+@media (hover:hover) and (pointer:fine){.btn:not([disabled]),.ib,.mode,.cat,.it,.lvc,.hch,.hc,.hx-w,.hx-arr,.tabs button,.tm,.map,.wch{will-change:transform}}
+/* плашка уровня: большая лента с названием, задача без плашки парит под ней и меньше ленты */
+.obj #lvname{display:inline-block;box-sizing:border-box;max-width:min(720px,70vw);font-size:clamp(22px,3.6vh,34px);font-weight:900;line-height:1.15;color:#fff;-webkit-text-stroke:0;text-shadow:0 2px 3px rgba(120,20,10,.55);padding:7px 10px 15px;position:relative;z-index:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-style:solid;border-color:transparent;border-width:0 46px;border-image:url(assets/ui/ui_ribbon.png?v=20) 0 120 fill / 0 46px stretch}
+.obj #obj{display:block;width:max-content;max-width:70vw;margin:-4px auto 0;padding:0;min-width:0;border:0;border-image:none;background:none;font-size:clamp(16px,2.5vh,23px);font-weight:900;color:#fff;-webkit-text-stroke:0;text-shadow:0 2px 2px rgba(70,40,18,.75),0 0 8px rgba(70,40,18,.55)}
+.obj #obj .ico,#hud .obj .ico{height:1.35em;vertical-align:-.35em}
+@media (max-height:500px){.obj #lvname{font-size:17px;padding:3px 6px 10px;border-width:0 28px;border-image-width:0 28px;max-width:52vw}.obj #obj{font-size:13px;margin-top:-3px}}
+@media (max-height:500px){.mode{font-size:15px!important}.mode span{padding-left:10px}}
+/* обучение */
+#tutor{display:none;position:fixed;left:50%;top:24%;transform:translateX(-50%);z-index:7;flex-direction:column;align-items:center;gap:8px;max-width:min(680px,88vw);padding:14px 26px;background:#fff6e8;border:4px solid #d9974c;border-radius:24px;box-shadow:0 6px 0 #a8743f66,0 10px 24px #5c341855;text-align:center;pointer-events:auto}
+#tutor.on{display:flex}body:not([data-screen=play]):not([data-screen=sandbox]) #tutor{display:none!important}
+#tutor.big{border-color:#ffb52e;background:#fff3c9;box-shadow:0 0 0 5px #ffd23a55,0 6px 0 #a8743f66,0 10px 28px #ffb52e99}
+#tutor .tt{font:900 clamp(18px,3.2vh,28px) Nunito,system-ui;color:#5b3410}
+#tutor .td{display:flex;gap:7px}#tutor .td i{width:12px;height:12px;border-radius:50%;background:#e6d4b4}#tutor .td i.ok{background:#62b832}#tutor .td i.cur{background:#ffb52e;box-shadow:0 0 0 3px #ffb52e55}
+#tutor .btn{margin:0;min-width:0;padding:2px 14px;font-size:14px}
+.tut-hl{position:relative;z-index:2;animation:tutGlow .9s ease-in-out infinite;filter:drop-shadow(0 0 10px #ffd23a) drop-shadow(0 0 4px #fff3b0)!important}
+.tut-hl::before{content:"";position:absolute;left:50%;top:-38px;width:26px;height:32px;margin-left:-13px;background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-3 -2 46 56'><path d='M14 3H26Q30 3 30 7V23H35Q40 23 37 27L23 46Q20 50 17 46L3 27Q0 23 5 23H10V7Q10 3 14 3Z' fill='%23fff' stroke='%236b3f1f' stroke-width='4' stroke-linejoin='round'/><path d='M26 7V27H33L21 43' fill='none' stroke='%23e9dccb' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/contain no-repeat;filter:drop-shadow(0 3px 0 #6b3f1f55);animation:tutArrow .6s ease-in-out infinite alternate;pointer-events:none}
+@keyframes tutGlow{50%{transform:scale(1.1)}}@keyframes tutArrow{to{transform:translateY(-8px)}}
+@media (max-height:500px){#tutor{top:17%;padding:7px 16px;gap:4px;border-radius:16px}#tutor .tt{font-size:16px}#tutor .btn{font-size:12px}.tut-hl::before{top:-32px}}
+#ammo{gap:2px;flex-wrap:nowrap}
+#ammo i.ammo-round{width:20px;height:40px}
+#ammo i.ammo-round.grenade{width:32px;height:40px}
+#ammo i.ammo-round.rocket{width:58px;height:30px}
+#ammo i.ammo-round.spear{width:14px;height:44px}#ammo i.ammo-round.arrow{width:12px;height:44px}#ammo i.ammo-round.knife{width:16px;height:40px}
+#ammo b{font-size:20px}
+.reload-hud{width:58px;height:58px}
+.reload-arrows{width:34px;height:34px;position:relative;z-index:1;animation:spin .8s linear infinite}
+#ammo .reload-progress{background:conic-gradient(#7dff5a var(--reload-angle),transparent 0)}
+@media (max-height:480px){#ammo i.ammo-round{width:14px;height:28px}#ammo i.ammo-round.grenade{width:22px;height:28px}#ammo i.ammo-round.rocket{width:40px;height:21px}#ammo b{font-size:15px}.reload-hud{width:40px;height:40px}.reload-arrows{width:24px;height:24px}}
+/* низкий экран: окно победы и поражения помещается целиком, кнопки в ряд */
+@media (max-height:520px){.box:has(>.emb){padding-top:0;padding-bottom:0;border-width:12px;border-image-width:12px}.box:has(>.emb) .emb{width:58px;height:58px;margin:10px auto 0}.box:has(>.emb) .emb::before{width:92px;height:92px;margin:-46px 0 0 -46px}
+ .box:has(>.emb) h3{font-size:18px;margin:0 auto 2px;padding:4px 6px 9px}.box:has(>.emb) .stars.big .ico{height:30px}.box:has(>.emb) p{margin:2px 0;font-size:13px}
+ .box:has(>.emb) .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;width:48%;min-height:44px;margin:2px 1%;font-size:15px;padding-top:0;padding-bottom:0;box-sizing:border-box}}
+/* подсказки на уровнях без портрета */
+#tip::before{display:none!important}#tip{padding:9px 20px 10px!important}
+/* наведение мышью: кнопка плавно подрастает, при нажатии проседает */
+@media (hover:hover) and (pointer:fine){.btn:not([disabled]),.ib,.mode,.cat,.it,.lvc,.hch,.hc,.hx-w,.hx-arr,.tabs button,.tm,.map,.wch,#mGift .gb{transition:transform .12s ease-out}
+ .btn:not([disabled]):hover,.ib:hover,.mode:hover,.cat:hover,.it:hover,.lvc:hover,.hch:hover,.hc:hover,.hx-w:hover,.hx-arr:hover,.tabs button:hover,.tm:hover,.map:hover,.wch:hover,#mGift .gb:hover{transform:scale(1.07)}
+ .btn:not([disabled]):active,.ib:active,.mode:active,.cat:active,.it:active,.lvc:active,.hch:active,.hc:active,.hx-w:active,.hx-arr:active,.tabs button:active,.tm:active,.map:active,.wch:active,#mGift .gb:active{transform:scale(.96)}}
+/* верх уровня: полоска здоровья меньше, плашка с прогрессом строго по центру экрана */
+#hud .hp{transform:scale(.72);transform-origin:0 0}
+#hud .obj{position:absolute;left:50%;top:0;transform:translateX(-50%);flex:none;width:max-content;max-width:52%}
+#hud .grp{margin-left:auto}
+/* экран загрузки: крупный логотип по центру неба */
+#loading{justify-content:flex-start;padding-top:9vh;box-sizing:border-box;gap:clamp(6px,2vh,18px)}
+#loadLogo{height:min(46vh,44vw);width:auto;max-width:90vw;filter:drop-shadow(0 6px 10px #0006)}
+#loading small{font:900 clamp(16px,3.2vh,28px) Nunito,system-ui;color:#fff4dc;-webkit-text-stroke:2px #7a4a22;paint-order:stroke fill;text-shadow:none}
+/* кнопки в окнах: при наведении растут чуть-чуть, не касаются соседних и не выходят за рамку */
+.box{overflow-x:hidden}.box .row2{gap:16px}
+@media (hover:hover) and (pointer:fine){.box .btn:not([disabled]):hover{transform:scale(1.025)}}
+/* вертикального режима нет: поверх всего небо, логотип и просьба повернуть экран. Работает ещё до загрузки скриптов */
+#rotate{display:none}
+#rotate{display:none!important}
+@media (max-aspect-ratio:999/1000){#rotate{display:none!important;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(20px,5vh,44px);padding:16px;box-sizing:border-box;touch-action:none;
+ background:#5fbdfb url(assets/ui/ui_bg_menu.jpg?v=16) 8% 0/auto 210% no-repeat;font:900 clamp(24px,7.5vw,40px) Nunito,system-ui;color:#fff4dc;text-align:center}
+ #rotate img{width:min(84vw,520px);height:auto;filter:drop-shadow(0 6px 0 #3a251844)}
+ #rotate b{-webkit-text-stroke:3px #7a4a22;paint-order:stroke fill;font-weight:900}
+ #rotate .ph{position:relative;display:block;width:clamp(58px,16vw,84px);aspect-ratio:9/16;border:6px solid #3a2518;border-radius:14px;background:linear-gradient(#8fd8ff,#d9f4ff);box-shadow:0 5px 0 #3a251844;animation:rotPhone 2.6s ease-in-out infinite}
+ #rotate .ph::after{content:"";position:absolute;left:50%;bottom:5%;width:22%;height:3.5%;margin-left:-11%;border-radius:9px;background:#3a2518}}
+@keyframes rotPhone{0%,20%{transform:rotate(0)}55%,85%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+#rotate .ex{display:none}
+@media (max-aspect-ratio:999/1000){#rotate.pc .ph{display:none}#rotate.pc .ex{display:flex;position:relative;align-items:center;justify-content:center;box-sizing:border-box;height:clamp(84px,14vh,112px);padding-top:18px;background:#fff6e8;border:7px solid #8a4f6d;border-radius:18px;box-shadow:0 5px 0 #3a251833;animation:rotExpand 1.7s ease-in-out infinite alternate}
+ #rotate.pc .ex i{position:absolute;left:0;right:0;top:14px;height:5px;background:#8a4f6d}
+ #rotate.pc .ex svg{width:62px;height:auto}}
+@keyframes rotExpand{0%,15%{width:clamp(96px,26vw,126px)}85%,100%{width:clamp(170px,60vw,230px)}}
+@media (prefers-reduced-motion:reduce){#rotate .ph{animation:none}#rotate.pc .ex{animation:none;width:170px}}
+/* крестик окна: высота-обёртка 0, чтобы не сдвигать содержимое; sticky держит его в углу при прокрутке */
+.mxw{position:sticky;top:0;height:0;z-index:6;text-align:right}
+.mx{width:46px;height:46px;padding:11px;border:0;border-radius:0;background:url(assets/ui/ui_ib_alt.png?v=20) center/100% 100% no-repeat;cursor:pointer;filter:drop-shadow(0 2px 0 #3a251855)}
+.mx svg{display:block;width:100%;height:100%;fill:none;stroke:#3a2518;stroke-width:4;stroke-linecap:round}
+@media (max-height:500px){.mx{width:36px;height:36px;padding:8px}.box.hxbox .hx-rec{right:50px}.box.hxbox h3{margin-left:6px}}
+/* поражение: вместо золотых лучей спокойное холодное свечение */
+.emb.lose::before{background:radial-gradient(closest-side,#dcebf5 0,#b4cde0aa 42%,#b4cde000 72%);animation:none}
+/* особое предложение: бейдж с оружием парит сбоку от окна победы */
+.trb{position:absolute;z-index:2;width:clamp(116px,15vw,160px);aspect-ratio:1;padding:0;border:0;border-radius:0;cursor:pointer;background:none;animation:trbFloat 2.6s ease-in-out infinite}
+.trb::after{content:"";position:absolute;inset:0;z-index:1;background:url(assets/ui/ui_offer_badge.png?v=1) center/100% 100% no-repeat;filter:drop-shadow(0 4px 0 #3a251855)}
+.trb::before{content:"";position:absolute;inset:-22%;z-index:0;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,#fff7bf 0,#ffe36a99 40%,#ffe36a00 72%),repeating-conic-gradient(#ffcf2e 0 11deg,#ffcf2e00 17deg 30deg);-webkit-mask:radial-gradient(closest-side,#000 55%,#0000);mask:radial-gradient(closest-side,#000 55%,#0000);animation:spin 14s linear infinite}
+.trb img:not(.ico){z-index:2;position:absolute;left:21%;top:13%;width:58%;height:58%;object-fit:contain;filter:drop-shadow(0 2px 1px #3a251855)}
+.trb span{z-index:3;position:absolute;left:50%;top:81%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap;color:#fff;-webkit-text-stroke:2px #3f1f8a;paint-order:stroke fill;font:900 clamp(11px,1.25vw,15px) Nunito,system-ui}
+.trb span .ico{height:1.2em}
+@keyframes trbFloat{0%,100%{transform:translate(0,-8px) rotate(-3deg)}50%{transform:translate(0,8px) rotate(3deg)}}
+@media (prefers-reduced-motion:reduce){.trb,.trb::before{animation:none}}
+/* окно поражения: кнопки столбиком, значок и кнопки чуть меньше, чтобы все помещались */
+.box:has(>.emb.lose) .emb{width:92px;height:92px;margin-top:14px}
+.box:has(>.emb.lose) .btn{margin-top:4px;margin-bottom:4px;min-height:50px;padding-top:0;padding-bottom:0}
+.box:has(>.emb.lose) p{margin:2px 0 4px}
+@media (max-height:640px){.box:has(>.emb.lose) .emb{width:60px;height:60px;margin-top:6px}.box:has(>.emb.lose) h3{margin-bottom:2px}.box:has(>.emb.lose) .btn{min-height:44px;font-size:17px;border-width:9px;border-image-width:9px;margin-top:2px;margin-bottom:2px;--bw:9px}}
+/* совсем низкий экран: кнопки в два столбца */
+@media (max-height:520px){.box:has(>.emb.lose){display:flex;flex-wrap:wrap;justify-content:center;align-content:flex-start;gap:3px 2%}.box:has(>.emb.lose)>.emb,.box:has(>.emb.lose)>p{flex:0 0 100%}.box:has(>.emb.lose)>.emb{width:44px;height:44px;margin:2px auto 0;flex:0 0 44px}.box:has(>.emb.lose)>h3{flex:0 0 auto;margin:0 24px}.box:has(>.emb.lose)>.btn{flex:0 0 48%;width:48%!important;margin:0!important;min-height:38px;height:38px;font-size:13px!important;padding-top:0;padding-bottom:0}}
+#pHint{position:relative}#pHint::after{content:"?";position:absolute;right:2px;top:-2px;width:20px;height:20px;border-radius:50%;background:#ffcf2e;color:#3a2518;font:900 15px/20px Nunito,system-ui}
+/* обучение покупке биты */
+.hx-w.tutbat{z-index:3;animation:tutBat 1s ease-in-out infinite}
+.hx-tutb{position:absolute;left:50%;bottom:calc(100% + 12px);transform:translateX(-50%);white-space:nowrap;padding:6px 12px;border-radius:12px;background:#fff6e8;border:3px solid #e8892a;color:#3a2518;font:900 15px Nunito,system-ui;pointer-events:none}
+.hx-tutb::after{content:"";position:absolute;left:50%;top:100%;margin-left:-8px;border:8px solid transparent;border-top-color:#e8892a}
+@keyframes tutBat{0%,100%{filter:drop-shadow(0 0 2px #ffcf2e)}50%{filter:drop-shadow(0 0 12px #ffcf2e) drop-shadow(0 0 4px #ffcf2e)}}
+/* перетаскивание оружия в песочнице */
+.wpghost{position:fixed;z-index:30;width:72px;height:72px;margin:-36px 0 0 -36px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 8px #ffe36a) drop-shadow(0 4px 2px #3a251866)}
+#items .it[data-wp]{touch-action:pan-x}
+#tutor.sb{top:14%}
+/* закрытый инструмент песочницы: значок серый, замок и метка рекламы */
+.ib{position:relative}.ib.locked>.ico{filter:grayscale(1) opacity(.65)}
+.ib .ib-lock{position:absolute;left:-7px;top:-9px;width:24px;height:auto}
+.ib .ib-ad{position:absolute;right:-7px;bottom:-6px;padding:1px 6px;border-radius:9px;background:#7b3fe4;color:#fff;font:900 11px/14px Nunito,system-ui;box-shadow:0 0 0 2px #fff6e8}
+/* стрелка обучения песочницы; у подсвеченных элементов своя стрелка не нужна */
+body[data-screen=sandbox] .tut-hl::before{display:none}
+body:not([data-screen=sandbox]) #sbArrow{display:none!important}
+/* песочница: игра за героя — панели прячутся, видно управление */
+body[data-screen=sandbox].sbplay #controls{display:flex}body.sbplay #bottom,body.sbplay #tools{display:none!important}
+#bPlay.on{filter:drop-shadow(0 0 8px #ffd23a)}
+/* предложение за награду в песочнице */
+.trb.sboffer{position:fixed;right:18px;top:36%;z-index:8}body:not([data-screen=sandbox]) .sboffer{display:none}
+/* счётчик лимита бойцов и предметов в песочнице */
+.sbcount{display:flex;gap:10px;align-items:center;padding:4px 12px;border-radius:14px;background:#fff6e8;border:3px solid #d9974c;box-shadow:0 3px 0 #a8743f66;color:#3a2518;font:900 16px Nunito,system-ui;white-space:nowrap}
+.sbcount span{display:flex;align-items:center;gap:3px}.sbcount .ico{height:22px}.sbcount .full{color:#d8342c}
+@media (max-height:500px){.sbcount{font-size:13px;padding:2px 8px;gap:6px}.sbcount .ico{height:17px}}
+body.sbplay .sbcount{display:none}
+#tutor .tb{display:flex;gap:8px}
+/* белая стрелка обучения и выбора бойца; svg внутри поворачивается по направлению */
+#sbArrow,.sbpk{display:none;position:fixed;z-index:9;width:34px;height:42px;margin-left:-17px;pointer-events:none;filter:drop-shadow(0 3px 0 #6b3f1f66) drop-shadow(0 0 6px #fff8)}
+#sbArrow svg,.sbpk svg{position:absolute;left:50%;top:50%;width:34px;height:42px;transform:translate(-50%,-50%)}
+#sbArrow{transform:translateY(-100%);animation:sbArrow .6s ease-in-out infinite alternate}
+#sbArrow.up{transform:none;animation-name:sbArrowUp}#sbArrow.up svg{transform:translate(-50%,-50%) rotate(180deg)}
+#sbArrow.side{width:42px;height:34px;margin-left:0;transform:translateY(-50%);animation-name:sbArrowSide}#sbArrow.side svg{transform:translate(-50%,-50%) rotate(90deg)}
+@keyframes sbArrow{from{margin-top:-10px}to{margin-top:0}}@keyframes sbArrowUp{from{margin-top:10px}to{margin-top:0}}
+body.sbpicking .sbpk{display:block;transform:translateY(-100%);animation:sbArrow .6s ease-in-out infinite alternate}
+body:not([data-screen=sandbox]) .sbpk{display:none!important}
+/* ползунки громкости в настройках: деревянная дорожка, зелёная заливка, бегунок-монета */
+.setrow.vol{gap:12px}.setrow.vol>span{min-width:96px}.setrow.vol.off{opacity:.5}
+.setrow .vv{min-width:52px;text-align:right;font:900 18px Nunito,system-ui;color:#3a2518}
+.vrange{-webkit-appearance:none;appearance:none;flex:1;height:16px;border-radius:10px;background:linear-gradient(90deg,#5fc23a var(--p,100%),#e8d3b4 var(--p,100%));border:3px solid #a8743f;box-shadow:inset 0 2px 0 #0002;cursor:pointer;margin:0}
+.vrange::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#fff6c2,#ffcf3a 45%,#e09a12);border:3px solid #8a5a1e;box-shadow:0 3px 0 #6b3f1f88}
+.vrange::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#fff6c2,#ffcf3a 45%,#e09a12);border:3px solid #8a5a1e;box-shadow:0 3px 0 #6b3f1f88}
+.vrange::-moz-range-track{background:transparent}
+@media (max-height:500px){.setrow.vol>span{min-width:76px}.vrange::-webkit-slider-thumb{width:24px;height:24px}}
+/* телефон боком: нижняя панель песочницы компактнее — больше места сцене */
+@media (max-height:420px){#bottom{border-top-width:8px!important}#cats{padding:3px 6px!important}#cats .cat{height:30px!important;font-size:12px!important}
+ #items{padding:4px 8px!important;margin-bottom:3px!important}#items .it{height:58px!important;width:66px!important;font-size:10px!important}#items .it b{height:26px!important}#items .it b .spi{max-height:26px!important;max-width:40px!important}}
+/* v=408: подложка кнопок от светлых полосок. Рамка кнопки — 9-slice; при дробной плотности пикселей между рамкой и
+   серединой остаётся волосяной зазор, и в нём просвечивал фон кнопки (та же картинка, растянутая целиком, со сдвинутым
+   бликом). Теперь под кнопкой лежит та же картинка, нарезанная по другим линиям (40 вместо 24): её стыки приходятся
+   на цельные участки верхнего слоя. --bw — толщина рамки, её ставят рядом с border-width во всех правилах кнопок. */
+:where(.btn){position:relative}
+.btn{--bw:10px;isolation:isolate}
+.btn::after{content:"";position:absolute;inset:calc(-1*var(--bw));z-index:-1;pointer-events:none;border-image-source:inherit;border-image-slice:40 fill;border-image-width:calc(var(--bw)*40/24);border-image-repeat:stretch}
+.btn:not(#_){background-image:none}
+</style>
+<style>body.ad-hold .btn.ad{display:none!important}body.intro-cut #controls{opacity:0;pointer-events:none;transition:opacity .3s}</style>
+<link rel="stylesheet" href="responsive.css?v=526">
+</head>
+<body data-screen="menu">
+<canvas id="game"></canvas>
+
+<div class="bar sb" id="top">
+  <div class="grp"><button class="ib" id="bHome" title="Меню">🏠</button><div class="coins">🪙 <span class="cv">0</span></div><div class="sbcount" id="sbCount"></div></div>
+  <button class="btn sm mission-entry" id="sbMissionBar"></button>
+  <div class="grp">
+    <button class="ib" id="bPlay" title="Играть за героя"><img class="ico" src="assets/ui/portrait_ogurets.png?v=12" alt=""></button>
+    <button class="ib" id="bFight" title="Бой">⚔️</button>
+    <button class="ib" id="bPause" title="Пауза">⏸</button>
+    <button class="ib" id="bSlow" title="Замедление">🐢</button>
+    <button class="ib" id="bGrav" title="Гравитация">🌍</button>
+    <button class="ib" id="bUndo" title="Отменить">↩️</button>
+    <button class="ib" id="bClear" title="Очистить">🧹</button>
+    <button class="ib" id="bMaps" title="Карта">🗺️</button>
+  </div>
+</div>
+<div class="bar sb" id="tools"></div>
+<div class="bar sb" id="bottom"><div id="cats"></div><div id="items"></div></div>
+
+<div class="play" id="hud">
+  <div class="hp"><div id="hpbar"><span class="trk"><em></em><i></i><span class="gl"></span></span></div><button id="hpico" type="button" title="Прокачка">🥒</button><span id="hpnum">100</span><span id="ammo"></span></div>
+  <div class="obj"><div id="lvname"></div><div id="obj"></div><div id="mods"></div></div>
+  <div class="grp"><div class="coins" id="levelWallet" aria-label="Монеты">🪙 <span class="cv">0</span></div><button class="ib mission-entry mission-hud" id="pMissions" title="Задания">📖</button><button class="ib" id="pHint" title="Подсказка" style="display:none">📺</button><button class="ib" id="pRestart" title="Заново">↻</button><button class="ib" id="pPause">⏸</button></div>
+</div>
+<div class="play" id="controls">
+  <div class="cl"><div id="joy"><i></i></div><div class="keys"><button data-k="jump">↑</button><button data-k="left">←</button><button data-k="right">→</button></div></div>
+  <div class="cr"><button id="touchJump" data-k="jump" title="Прыжок"></button><button id="touchDash" data-k="dash" title="Рывок"><span class="dash-glyph">»</span><em class="kh">E</em></button><button data-k="attack" class="atk"><em class="kh">F</em></button></div>
+</div>
+
+<div id="tutor"></div>
+<div id="menu"></div>
+<div id="tip"></div>
+<div id="banner"></div>
+<div id="modal"></div>
+<div id="toast"></div>
+<div id="rotate"><img id="rotLogo" src="assets/ui/logo_text.png?v=522" alt="Битва овощей"><i class="ph"></i><div class="ex"><i></i><svg viewBox="0 0 64 24" aria-hidden="true"><path d="M4 12h56M14 3l-10 9 10 9M50 3l10 9-10 9" fill="none" stroke="#8a4f6d" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><b id="rotTouch">Поверни экран</b></div>
+<div id="loading"><img id="loadLogo" src="assets/ui/logo_text.png?v=522" alt="Битва овощей"><small id="loadText">Загрузка...</small></div>
+
+<script src="js/lib/matter.min.js"></script>
+<script src="js/i18n.js?v=541"></script>
+<script src="js/platform_pikabu.js?v=525"></script>
+<script src="js/sdk.js?v=535"></script>
+<script src="js/sprites.js?v=535"></script>
+<script src="js/maps.js?v=523"></script>
+<script src="js/fx.js?v=396"></script>
+<script src="js/world.js?v=535"></script>
+<script src="js/combat.js?v=522"></script>
+<script src="js/evolution.js?v=480"></script>
+<script src="js/fire.js?v=433"></script>
+<script src="js/modes.js?v=541"></script>
+<script src="js/story.js?v=528"></script>
+<script src="js/traversal.js?v=513"></script>
+<script src="js/run_hazards.js?v=453"></script>
+<script src="js/ascent.js?v=396"></script>
+<script src="js/lore.js?v=468"></script>
+<script src="js/banter.js?v=396"></script>
+<script src="js/memes.js?v=396"></script>
+<script src="js/loot.js?v=535"></script>
+<script src="js/first_minutes.js?v=531"></script>
+<script src="js/intro.js?v=540"></script>
+<script src="js/upgrade_coach.js?v=455"></script>
+<script src="js/missions.js?v=522"></script>
+<script src="js/sbmissions.js?v=420"></script>
+<script src="js/economy.js?v=439"></script>
+<script src="js/analytics.js?v=541"></script>
+<script src="js/ui.js?v=541"></script>
+<script src="js/capture.js?v=489"></script>
+<script src="js/responsive.js?v=401"></script>
+</body>
+</html>
+
+
+
+
+
