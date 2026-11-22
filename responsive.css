@@ -884,3 +884,10 @@ body.is-mobile #controls #touchDash{margin-left:clamp(14px,5vh,28px)}
 body.mob-p #controls #touchDash{margin-left:12px!important}
 #buffs .buff.wp{border-color:#a97be0}  /* v497: оружие из ящика — сколько ударов/выстрелов осталось */
 body.is-mobile .rec-note{margin:0 0 4px!important;font-size:11.5px!important}
+/* v542: рывок на Q, кнопка рывка крупнее (была 68 / 56–84 px) */
+#controls #touchDash{width:88px;height:88px}
+body.touch-ui #controls #touchDash{width:clamp(70px,22vh,98px);height:clamp(70px,22vh,98px)}
+body.is-mobile #controls #touchDash{width:clamp(76px,23vh,104px);height:clamp(76px,23vh,104px)}
+body.mob-p #controls #touchDash{width:80px!important;height:80px!important}
+#touchDash .dash-glyph{transform:translate(-50%,-50%) scale(1.35)}
+body.is-mobile #touchDash .dash-glyph{transform:translate(-50%,-50%) scale(1.6)}

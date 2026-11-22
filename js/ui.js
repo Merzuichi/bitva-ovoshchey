@@ -251,7 +251,7 @@ const fineInput=()=>matchMedia('(hover:hover) and (pointer:fine)').matches;
 const SB_PLAY_STEPS=()=>[
  {txt:fineInput()?'Ходи стрелками ← →':'Ходи джойстиком',hl:fineInput()?'#controls .keys':'#joy',ok:s=>!!SbPlay.ent&&Math.abs(SbPlay.ent.parts.torso.position.x-s.x0)>70},
  {txt:fineInput()?'Прыжок — пробел или ↑':'Нажми кнопку ↑ — это прыжок. Джойстиком выбирай направление',hl:fineInput()?'#controls .keys [data-k=jump]':'#touchJump',ok:s=>s.jumped},
- {txt:fineInput()?'Рывок — нажми E. Направление задаётся движением, перезарядка — 1,2 с':'Нажми » для рывка. Направление задаётся джойстиком, перезарядка — 1,2 с',hl:fineInput()?null:'#touchDash',ok:()=>!!SbPlay.ent?.lastDashAt},
+ {txt:fineInput()?'Рывок — нажми Q. Направление задаётся движением, перезарядка — 1,2 с':'Нажми » для рывка. Направление задаётся джойстиком, перезарядка — 1,2 с',hl:fineInput()?null:'#touchDash',ok:()=>!!SbPlay.ent?.lastDashAt},
  {txt:fineInput()?'Удар — F или мышка, зажми для сильного удара. Палка бьёт сама':'Удар — кнопка справа внизу, зажми для сильного удара. Палка бьёт сама',hl:'#controls .atk',ok:s=>s.hit||s.t>300},
  {txt:'Нажми ⚔️ — и бойцы других команд нападут на тебя',hl:'#bFight',ok:()=>SandboxMode.fight},
  {txt:'Чтобы вернуться к созданию, нажми на героя вверху ещё раз',hl:'#bPlay',end:true},
@@ -923,7 +923,7 @@ document.querySelectorAll('#controls [data-k]').forEach(b=>{
 {const placeDash=()=>{const d=$('#touchDash'),to=document.body.classList.contains('is-mobile')?$('#controls .cl'):$('#controls .cr');if(d&&to&&d.parentNode!==to){if(to.classList.contains('cr'))to.insertBefore(d,to.querySelector('.atk'));else to.appendChild(d);}};
  placeDash();new MutationObserver(placeDash).observe(document.body,{attributes:true,attributeFilter:['class']});}
 const keyBtn=(k,on)=>document.querySelectorAll(`#controls [data-k=${k}]`).forEach(b=>b.classList.toggle('on',on));
-const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'jump',KeyW:'jump',Space:'jump',KeyE:'dash',KeyL:'dash',KeyF:'attack',KeyJ:'attack',KeyK:'attack',Enter:'attack'};
+const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'jump',KeyW:'jump',Space:'jump',KeyQ:'dash',KeyL:'dash',KeyF:'attack',KeyJ:'attack',KeyK:'attack',Enter:'attack'};
 addEventListener('keydown',e=>{if($('#modal').classList.contains('on'))return;if(screen!=='play'&&!(screen==='sandbox'&&SbPlay.ent))return;const k=KEYMAP[e.code];if(k){if(k==='jump'&&!keys.jump)queueJump();if(k==='dash'&&!keys.dash)queueDash();if(k==='attack'&&!keys.attack)queueAttackPress();keys[k]=true;keyBtn(k,true);e.preventDefault();}if(e.code==='Escape'&&PF.escPause)openPause();if(e.code==='KeyR'&&Run.type==='puzzle')restartLevel();});
 addEventListener('keyup',e=>{const k=KEYMAP[e.code];if(k){keys[k]=false;keyBtn(k,false);}});
 function resetGameInput(){
@@ -942,7 +942,7 @@ function updateDashUI(){
  b.classList.toggle('cooldown',cooling);b.setAttribute('aria-disabled',String(cooling));
  const text=cooling?(left/60).toFixed(1):'»',glyph=b.querySelector('.dash-glyph');if(glyph&&glyph.textContent!==text)glyph.textContent=text;
  if(h&&!h.dead&&!S.tut.dash&&dashCoachHero!==h&&!Intro.active&&!Tut.on&&!SbTut.on&&!$('#tutor').classList.contains('on')&&!paused){
-  dashCoachHero=h;showTip(t(fineInput()?'Рывок — нажми E. Направление задаётся движением, перезарядка — 1,2 с':'Нажми » для рывка. Направление задаётся джойстиком, перезарядка — 1,2 с'));
+  dashCoachHero=h;showTip(t(fineInput()?'Рывок — нажми Q. Направление задаётся движением, перезарядка — 1,2 с':'Нажми » для рывка. Направление задаётся джойстиком, перезарядка — 1,2 с'));
   GameStats.send('tutorial_step',{tutorial:'dash',step:'hint'});
  }
 }
