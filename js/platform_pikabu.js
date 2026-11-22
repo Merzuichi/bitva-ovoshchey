@@ -15,6 +15,7 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
    // вне площадки init() может не ответить вовсе — не даём игре зависнуть на загрузке
    this.sdk=await Promise.race([PkbSDK.init(),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),12000))]);
    this.pid=this.sdk.player&&this.sdk.player.id||null;
+   this.debug({event:'init',rewarded:this.sdk.ads.rewarded.isSupported,fullscreen:this.sdk.ads.fullscreen.isSupported,preloader:this.sdk.ads.preloader.isSupported,auth:!!this.sdk.player.isAuthorized});
    // ошибки облачного сохранения: при конфликте (игра открыта на другом устройстве/вкладке) дальнейшие записи невозможны до перезагрузки
    this.sdk.on('storageSaveError',reason=>{
     console.warn('[PF] сохранение не удалось:',reason);
@@ -31,6 +32,11 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
   }catch(e){this.sdk=null;console.log('[PF] локальный режим: SDK Пикабу недоступен');}
   if(!this.canReward()){const st=document.createElement('style');st.textContent='.btn.ad{display:none!important}';document.head.appendChild(st);}
  },
+ // диагностика для проверки в тестовом окружении: в консоль, а при ?pkbdebug в адресе — ещё и странице Пикабу (фрейм с другого сайта, его консоль снаружи не видна)
+ debug(info){
+  console.log('[PF]',JSON.stringify(info));
+  try{if(/pkbdebug/.test(location.search))parent.postMessage({pkbDebug:info},'*');}catch(e){}
+ },
  restore(){},
  online(){return !!this.sdk;},
  lang(){return 'ru';},  // требование площадки: при запуске игра на русском
@@ -46,16 +52,17 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
   let can=false;try{can=await this.sdk.ads.fullscreen.canShow();}catch(e){}
   if(!can){res();return;}
   this.lastAd=now;pauseAll(true,'ad');
-  try{const r=await this.sdk.ads.fullscreen.show();if(!r.rendered)console.warn('[PF] реклама не показана:',r.reason);}catch(e){}
+  try{const r=await this.sdk.ads.fullscreen.show();this.debug({event:'fullscreen_show',result:r});}catch(e){this.debug({event:'fullscreen_error',error:String(e)});}
   pauseAll(false,'ad');res();
  });},
  async rewarded(){
   if(!this.sdk){toast(t('🎬 (тест) реклама просмотрена'));await new Promise(r=>setTimeout(r,300));return true;}
   let can=false;try{can=await this.sdk.ads.rewarded.canShow();}catch(e){}
+  this.debug({event:'rewarded_canShow',can});
   if(!can){toast(t('Реклама сейчас недоступна'));return false;}
   pauseAll(true,'ad');
   let ok=false;
-  try{const r=await this.sdk.ads.rewarded.show();ok=!!(r&&r.reward);if(r&&!r.rendered)console.warn('[PF] реклама не показана:',r.reason);}catch(e){}
+  try{const r=await this.sdk.ads.rewarded.show();ok=!!(r&&r.reward);this.debug({event:'rewarded_show',result:r});}catch(e){this.debug({event:'rewarded_error',error:String(e)});}
   pauseAll(false,'ad');
   if(ok)this.lastAd=Date.now();
   return ok;
