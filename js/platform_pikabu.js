@@ -10,6 +10,23 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
  lateRest:true,        // фоны остальных глав — после начала игры
  arcadeAdEvery:3,      // аркада: реклама раз в столько уровней
  storyAdEvery:2,       // история: реклама раз в столько уровней
+ // v547: игровые события (GameStats.send) дублируются целями в наш счётчик Яндекс Метрики.
+ // null — отправка выключена. Локально не шлём (только с ?metrika=1), чтобы не засорять статистику тестами.
+ metrikaId:114707939,  // счётчик «Битва овощей — Пикабу», сайт merzuichi.github.io/bitva-ovoshchey
+ track(name,payload){
+  const id=this.metrikaId;if(!id)return;
+  if(this.devAllowed&&!new URLSearchParams(location.search).has('metrika'))return;
+  if(!this.ymReady){
+   this.ymReady=true;
+   window.ym=window.ym||function(){(window.ym.a=window.ym.a||[]).push(arguments);};window.ym.l=window.ym.l||Date.now();
+   // tag.js может уже подключить SDK Пикабу (для своего счётчика) — второй раз не грузим
+   if(![...document.scripts].some(s=>s.src.includes('mc.yandex.ru/metrika/tag.js'))){
+    const s=document.createElement('script');s.async=true;s.src='https://mc.yandex.ru/metrika/tag.js?id='+id;document.head.appendChild(s);
+   }
+   window.ym(id,'init',{ssr:false,clickmap:false,trackLinks:false,accurateTrackBounce:true,referrer:document.referrer,url:location.href,params:{platform:'pikabu'}});
+  }
+  window.ym(id,'reachGoal',name,payload);
+ },
  async init(){
   this.wrapBoot();
   try{

@@ -6,7 +6,7 @@
 // Показы рекламы, покупки, начало/конец сессии и сообщения platform.sendMessage площадка пишет сама — их здесь не дублируем.
 const TUTORIAL_VERSION='t396';  // менять при изменении шагов обучения
 const GameStats={
- version:'541',mode:null,modeMs:0,attempt:null,attemptNumber:0,lastTime:0,frames:[],sampleMs:0,milestones:new Set(),
+ version:'547',mode:null,modeMs:0,attempt:null,attemptNumber:0,lastTime:0,frames:[],sampleMs:0,milestones:new Set(),
  log:[],LOG_MAX:400,counters:{},bootAt:performance.now(),
  debug:(()=>{try{return PF.devAllowed&&new URLSearchParams(location.search).get('analytics')==='debug';}catch(_){return false;}})(),
  context(){
@@ -31,6 +31,7 @@ const GameStats={
   this.log.push({name,t:Math.round(performance.now()),...payload});
   if(this.log.length>this.LOG_MAX)this.log.splice(0,this.log.length-this.LOG_MAX);
   if(this.debug)console.log('[stats]',name,payload);
+  if(typeof PF.track==='function')try{PF.track(name,payload);}catch(_){}  // v547: площадки со своей аналитикой (Пикабу → Метрика)
   if(PF.name!=='playgama'||!PF.ok||!window.bridge?.analytics?.send)return;
   try{Promise.resolve(bridge.analytics.send(name,payload)).catch(()=>{});}catch(_){}
  },
