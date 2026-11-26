@@ -2,6 +2,8 @@
 /* ============ площадка: Пикабу Игры ============ */
 // Подключается вместо platform_yandex.js сборкой tools/build_pikabu.py. Документация SDK: https://games.pikabu.ru/sdk/docs/
 // SDK работает только на странице игры на Пикабу или в тестовом окружении Студии; при локальном запуске — тестовые заглушки.
+// тексты, которые есть только в версии для Пикабу (переводы для английского языка в настройках)
+Object.assign(EN,{'Войди через Пикабу — прогресс сохранится в аккаунте и будет на любом устройстве':'Sign in with Pikabu to keep your progress on any device','Войти и сохранить':'Sign in and save','Готово! Прогресс сохранён в аккаунте Пикабу':'Done! Progress saved to your Pikabu account','Нашли прогресс в аккаунте — загрузим его':'Found progress in your account, loading it'});
 const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
  sfxExt:'mp3',         // сборка перекодирует .wav в .mp3, как для Playgama
  escPause:true,        // Esc открывает паузу
@@ -47,7 +49,9 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
     const id=this.sdk.player.id;if(id===this.pid)return;
     let cloud=null;try{cloud=this.sdk.storage.get('save');}catch(e){}
     this.pid=id;
-    if(cloud&&cloud.pid&&cloud.pid===id){location.reload();return;}
+    // v550: у аккаунта уже есть прогресс — перезапуск с ним; если открыто окно (например, итоги уровня), ждём, пока его закроют, чтобы не пропала награда
+    if(cloud&&cloud.pid&&cloud.pid===id){const go=()=>{if($('#modal').classList.contains('on'))setTimeout(go,500);else location.reload();};toast(t('Нашли прогресс в аккаунте — загрузим его'));go();return;}
+    toast(t('Готово! Прогресс сохранён в аккаунте Пикабу'));
     try{save();flushSave();}catch(e){}
    });
   }catch(e){this.sdk=null;console.log('[PF] локальный режим: SDK Пикабу недоступен');}
@@ -134,7 +138,28 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
  ready(){if(this.started2)return;this.started2=true;try{this.sdk&&this.sdk.gameStarted();}catch(e){}},
  start(){},
  stop(){},
- level(){},
+ // v550: после победы гостю предлагаем войти через Пикабу — прогресс сохранится в аккаунте и будет на всех устройствах.
+ // Пикабу советует просить вход не при запуске, а после первого уровня. Отказался (не нажал) — снова не раньше чем через 3 дня, и не чаще раза за сессию.
+ AUTH_ASK_GAP:3*864e5,
+ level(kind){if(kind==='completed')setTimeout(()=>this.authCard(),0);},
+ authCard(){
+  try{
+   if(!this.sdk||this.sdk.player.isAuthorized||this.authAsked||Run.kind!=='story')return;
+   if(Date.now()-(S.pkAuthAskAt||0)<this.AUTH_ASK_GAP)return;
+   const box=$('#modal.on .box'),btn=box&&box.querySelector('#w1');if(!btn)return;
+   this.authAsked=true;S.pkAuthAskAt=Date.now();save();
+   const w=document.createElement('div');w.id='pkAuth';
+   w.innerHTML=`<p class="note">🔐 ${t('Войди через Пикабу — прогресс сохранится в аккаунте и будет на любом устройстве')}</p><button class="btn b" id="pkAuthBtn">${t('Войти и сохранить')}</button>`;
+   btn.after(w);  // под «Дальше»: не отбирает нажатия у ×3 за рекламу — главного дохода
+   GameStats.send('auth_prompt',{action:'shown',level:Run.idx+1});
+   $('#pkAuthBtn').onclick=async()=>{
+    GameStats.send('auth_prompt',{action:'clicked',level:Run.idx+1});
+    try{await this.sdk.auth.openAuthDialog();}catch(e){}
+    const ok=!!this.sdk.player.isAuthorized;GameStats.send('auth_prompt',{action:ok?'authorized':'closed',level:Run.idx+1});
+    if(ok){const el=$('#pkAuth');if(el)el.remove();}
+   };
+  }catch(e){console.warn('[PF] authCard',e);}
+ },
  interstitial(){return new Promise(async res=>{
   const now=Date.now();
   // v548: не чаще раза в 2 минуты и не в первую минуту после запуска; новичку — ещё и не до первой победы (adHold в sdk.js)
