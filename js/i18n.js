@@ -424,3 +424,4 @@ Object.assign(EN,{'Сзади волна Озверина! Беги вправо
 Object.assign(EN,{'Временный буст на уровень':'Temporary boost for this level','+25% урона':'+25% damage','+15% скорости':'+15% speed'});
 Object.assign(EN,{'Копья':'Spears','Ножи':'Knives'});
 Object.assign(EN,{'Увеличить бойца':'Grow a fighter','Максимум!':'Max!'});
+Object.assign(EN,{'Волна бьёт! Беги вправо!':'The wave hits! Run right!'});  // v549

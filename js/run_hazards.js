@@ -103,7 +103,10 @@ const RunHazards={
   for(const e of entities){
    if(e.type!=='npc'||e.dead||e.removed||e.hung||e.caged)continue;
    const p=e.parts.torso.position;if(p.x>c.x-6)continue;
-   const hurt=e.isPlayer?e.hpMax*.005:1.2;damageNpc(e,hurt,p.x,p.y,null);
+   // v549: герой получал 0,5% здоровья за кадр — без цифр урона и почти незаметно, а волна ещё и толкала его к финишу,
+   // так что от неё можно было не убегать. Теперь накрыло — удар на 20% здоровья, не чаще раза в 45 кадров (стоя на месте — гибель за ~5 с)
+   if(e.isPlayer){if(frame-(e.waveHitAt??-99)>=45){e.waveHitAt=frame;damageNpc(e,e.hpMax*.2,p.x,p.y,null);shake=Math.min(12,shake+5);Snd.squish();if(!c.hitTold){c.hitTold=true;toast(t('Волна бьёт! Беги вправо!'));}}}
+   else damageNpc(e,1.2,p.x,p.y,null);
    // выталкивает вперёд, но не в яму
    if(frame%12===0&&!inPit(p.x+60)&&!inPit(p.x+120)){for(const b of e.bodies)if(e.attached.has(b.plugin.part))Body.setVelocity(b,{x:Math.max(b.velocity.x,6),y:-4});juice(p.x,p.y,'#9cff6a',4,3);}
   }

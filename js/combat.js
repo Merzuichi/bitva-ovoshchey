@@ -248,8 +248,11 @@ function updateFighter(ent){
  // v=429: на ходу ступни ставятся расчётом и висят на 1–6 px над опорой, поэтому касания нет; через 18 кадров шаг
  // выключался, герой проседал и подскакивал (цикл ~24 кадра). Опора прямо под ступнями — значит стоим
  if(ent.gaitOn&&frame-ent.grounded>=2&&(ent.isPlayer||frame%3===0)&&hasJumpSupport(ent))ent.grounded=frame;
- // идёт ли шаг: двумя ногами, по своей воле; тогда ноги ведёт stepGait, а не выпрямление
- const stepping=!dashing&&fighting&&ent.ctrl&&ent.ctrl.move&&ent.stun<=0&&!grabbed&&!ent.tackle&&!zeroG&&legCount(ent)===2&&frame-ent.grounded<18&&(ent.jumpCd||0)<=20&&frame-(ent.bounced||-99)>30;
+ // идёт ли шаг: двумя ногами, по своей воле; тогда ноги ведёт stepGait, а не выпрямление.
+ // v549: у героя опора проверяется каждый кадр (строка выше), поэтому запас без опоры — 5 кадров, а не 18:
+ // за 18 кадров шаг держал корпус в воздухе, и герой пробегал над ямой с кольями шириной до ~130 px
+ // и «бежал по воздуху» с края платформы
+ const stepping=!dashing&&fighting&&ent.ctrl&&ent.ctrl.move&&ent.stun<=0&&!grabbed&&!ent.tackle&&!zeroG&&legCount(ent)===2&&frame-ent.grounded<(ent.isPlayer?5:18)&&(ent.jumpCd||0)<=20&&frame-(ent.bounced||-99)>30;
  if(!stepping&&grounded&&Math.abs(t.velocity.y)<1){ent.standY=t.position.y;  // высота стойки для шага
   const foot=Math.max(P.llL.bounds.max.y,P.llR.bounds.max.y)-t.position.y;if(foot>(ent.standOff||0))ent.standOff=foot;}  // от корпуса до ступней в полный рост
  if(stepping!==!!ent.gaitOn){ent.gaitOn=stepping;P.llL.friction=P.llR.friction=stepping?.05:.8;if(!stepping)ent.gaitAmp=0;}  // ступни не цепляются за землю, пока идём
