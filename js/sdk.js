@@ -39,7 +39,9 @@ function placeToast(){
 // Это условие, а не счётчик частоты: частоту рекламы по-прежнему решает Bridge.
 const AD_HOLD_MS=180000;
 const adHold=()=>{try{return !(S.story.open>0||S.arcadeBest>0||S.tut.firstMission_story||S.tut.firstMission_arcade)&&performance.now()<AD_HOLD_MS;}catch(_){return false;}};
-setInterval(()=>{try{document.body.classList.toggle('ad-hold',adHold());}catch(_){}},1000);
+// v548: площадка может открыть рекламу за награду сразу (PF.rewardFree): её смотрят только по своей кнопке, а пауза новичка — против межстраничной
+const rewardHold=()=>adHold()&&!(typeof PF!=='undefined'&&PF.rewardFree);
+setInterval(()=>{try{document.body.classList.toggle('ad-hold',rewardHold());}catch(_){}},1000);
 const Y={
  init(){return PF.init();},
  restore(){return PF.restore();},
@@ -52,12 +54,12 @@ const Y={
  // placement — где показана межстраничная реклама (для аналитики): площадка сама решает, показать ли её
  interstitial(placement='other'){if(S.noads||adHold())return Promise.resolve();GameStats.send('interstitial_requested',{placement});return PF.interstitial(placement);},
  async rewarded(placement='other'){
-  if(adHold())return false;
+  if(rewardHold())return false;
   GameStats.send('reward_action',{placement,action:'requested'});
   try{const granted=!!(await PF.rewarded());GameStats.send('reward_action',{placement,action:granted?'granted':'not_granted'});return granted;}
   catch(_){GameStats.send('reward_action',{placement,action:'not_granted'});return false;}
  },
- canReward(){return !adHold()&&PF.canReward();},
+ canReward(){return !rewardHold()&&PF.canReward();},
  shopItems(){return IAP.filter(p=>PF.sells(p.id));},
  price(id){return PF.price(id);},
  async buy(id){

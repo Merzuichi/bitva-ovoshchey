@@ -8,8 +8,10 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
  devAllowed:['localhost','127.0.0.1','[::1]',''].includes(location.hostname), // режим разработчика только при локальном запуске
  initFirst:true,       // v546: SDK до загрузки ресурсов — по облачному сохранению видно, новичок ли это (быстрый старт)
  lateRest:true,        // фоны остальных глав — после начала игры
- arcadeAdEvery:3,      // аркада: реклама раз в столько уровней
- storyAdEvery:2,       // история: реклама раз в столько уровней
+ arcadeAdEvery:2,      // v548: аркада — реклама раз в 2 уровня (было 3), чаще не даёт интервал 2 мин
+ storyAdEvery:1,       // v548: история — после каждого уровня (было через один), чаще не даёт интервал 2 мин
+ rewardFree:true,      // v548: реклама за награду доступна сразу, без паузы новичка (она только по кнопке игрока)
+ AD_GAP:120000,        // v548: межстраничная не чаще раза в 2 минуты — минимум площадки (было 3,5 мин)
  // v547: игровые события (GameStats.send) дублируются целями в наш счётчик Яндекс Метрики.
  // null — отправка выключена. Локально не шлём (только с ?metrika=1), чтобы не засорять статистику тестами.
  metrikaId:114707939,  // счётчик «Битва овощей — Пикабу», сайт merzuichi.github.io/bitva-ovoshchey
@@ -82,7 +84,16 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
   this.foes=Intro.FOES;Intro.FOES=['perets','pomidor'];  // остальные противники интро выходят, как только догрузятся
   const keys=[...AVAILABLE].filter(k=>SPRITES[k]&&this.inSet(k,this.abIntro)),total=keys.length+this.HUD.length;let done=0;
   const tick=()=>{done++;const e=document.getElementById('loadText');if(e)e.textContent=t('Загрузка')+' '+Math.round(done/total*100)+'%';};
-  await Promise.all([...keys.map(k=>this.sprite(k).then(tick)),...this.HUD.map(n=>new Promise(r=>{const im=new Image();im.onload=im.onerror=()=>{tick();r();};im.src=`assets/ui/${n}.png?v=20`;}))]);
+  await Promise.all([this.preloader(),...keys.map(k=>this.sprite(k).then(tick)),...this.HUD.map(n=>new Promise(r=>{const im=new Image();im.onload=im.onerror=()=>{tick();r();};im.src=`assets/ui/${n}.png?v=20`;}))]);
+ },
+ // v548: реклама при загрузке (preloader) — только новичкам, пока грузится первая сцена; площадка даёт её только на телефонах и до gameStarted.
+ // Закрыть её можно сразу. Звук ещё не загружен, так что ставить музыку на паузу не нужно.
+ async preloader(){
+  try{
+   const p=this.sdk&&this.sdk.ads.preloader;if(!p||!p.isSupported||!(await p.canShow()))return;
+   const r=await p.show();this.debug({event:'preloader_show',result:r});
+   if(r&&r.rendered)this.lastAd=Date.now();  // межстраничная — не сразу после неё
+  }catch(e){this.debug({event:'preloader_error',error:String(e)});}
  },
  // игра уже идёт: сначала звуки и вторая стартовая сцена, затем остальные герои и оружие, эффекты, в конце фоны глав
  async afterReady(loadRest){
@@ -126,8 +137,8 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
  level(){},
  interstitial(){return new Promise(async res=>{
   const now=Date.now();
-  // не чаще раза в 3,5 минуты и не раньше 3,5 минуты после запуска (как в версии для Яндекса; у площадки минимум 2 минуты)
-  if(now-this.lastAd<210000||now-this.started<210000){res();return;}
+  // v548: не чаще раза в 2 минуты и не в первую минуту после запуска; новичку — ещё и не до первой победы (adHold в sdk.js)
+  if(now-this.lastAd<this.AD_GAP||now-this.started<60000){res();return;}
   if(!this.sdk){this.lastAd=now;toast(t('📺 (тест) межстраничная реклама'));res();return;}
   let can=false;try{can=await this.sdk.ads.fullscreen.canShow();}catch(e){}
   if(!can){res();return;}
