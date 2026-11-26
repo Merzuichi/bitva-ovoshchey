@@ -119,7 +119,7 @@ const EN={
  'Рывок':'Dash',
  'Отдалить камеру':'Zoom out',
  'Приблизить камеру':'Zoom in',
- 'Рывок — нажми Q. Направление задаётся движением, перезарядка — 1,2 с':'Press Q to dash. Move to choose the direction. Cooldown: 1.2s',
+ 'Рывок — нажми E или Shift. Направление задаётся движением, перезарядка — 1,2 с':'Press E or Shift to dash. Move to choose the direction. Cooldown: 1.2s',
  'Нажми » для рывка. Направление задаётся джойстиком, перезарядка — 1,2 с':'Tap » to dash. Use the joystick to choose the direction. Cooldown: 1.2s',
  'Прыжок':'Jump',
  'Разбегись, зажми атаку и прыгни — таран во врага! 💢':'Build up speed, hold attack and jump to tackle the enemy! 💢',

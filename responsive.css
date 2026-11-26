@@ -884,10 +884,27 @@ body.is-mobile #controls #touchDash{margin-left:clamp(14px,5vh,28px)}
 body.mob-p #controls #touchDash{margin-left:12px!important}
 #buffs .buff.wp{border-color:#a97be0}  /* v497: оружие из ящика — сколько ударов/выстрелов осталось */
 body.is-mobile .rec-note{margin:0 0 4px!important;font-size:11.5px!important}
-/* v542: рывок на Q, кнопка рывка крупнее (была 68 / 56–84 px) */
-#controls #touchDash{width:88px;height:88px}
-body.touch-ui #controls #touchDash{width:clamp(70px,22vh,98px);height:clamp(70px,22vh,98px)}
-body.is-mobile #controls #touchDash{width:clamp(76px,23vh,104px);height:clamp(76px,23vh,104px)}
-body.mob-p #controls #touchDash{width:80px!important;height:80px!important}
-#touchDash .dash-glyph{transform:translate(-50%,-50%) scale(1.35)}
-body.is-mobile #touchDash .dash-glyph{transform:translate(-50%,-50%) scale(1.6)}
+/* v545: рывок на E и Shift, кнопка рывка меньше (в v542 была 88 / 70–104 px) */
+#controls #touchDash{width:62px;height:62px}
+body.touch-ui #controls #touchDash{width:clamp(54px,17vh,74px);height:clamp(54px,17vh,74px)}
+body.is-mobile #controls #touchDash{width:clamp(56px,17vh,76px);height:clamp(56px,17vh,76px)}
+body.mob-p #controls #touchDash{width:62px!important;height:62px!important}
+#touchDash .dash-glyph{transform:translate(-50%,-50%)}
+body.is-mobile #touchDash .dash-glyph{transform:translate(-50%,-50%) scale(1.15)}
+/* v545: подсветка обучения поднимала джойстик вместе с его широкой зоной нажатия над кнопкой рывка — касание рывка пропадало */
+body.is-mobile #controls #touchDash,body.is-mobile #controls #touchJump,body.is-mobile #controls button.atk{position:relative;z-index:3}
+/* v545: узкие телефоны (360 px): кнопка атаки вылезала за край */
+@media(max-width:379px){
+ body.mob-p #joy{width:102px!important;height:102px!important}
+ body.mob-p #controls .cr{gap:8px!important}
+ body.mob-p #controls #touchDash{width:56px!important;height:56px!important;margin-left:8px!important}
+ body.mob-p #controls #touchJump{width:62px!important;height:62px!important}
+ body.mob-p #controls button.atk,body.mob-p #controls button.atk.gun{width:76px!important;height:76px!important}
+}
+@media(max-width:345px){
+ body.mob-p #joy{width:92px!important;height:92px!important}
+ body.mob-p #controls .cr{gap:6px!important}
+ body.mob-p #controls #touchDash{width:50px!important;height:50px!important;margin-left:6px!important}
+ body.mob-p #controls #touchJump{width:56px!important;height:56px!important}
+ body.mob-p #controls button.atk,body.mob-p #controls button.atk.gun{width:68px!important;height:68px!important}
+}

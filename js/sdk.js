@@ -50,7 +50,7 @@ const Y={
  online(){return PF.online();},
  lang(){return PF.lang();},
  // placement — где показана межстраничная реклама (для аналитики): площадка сама решает, показать ли её
- interstitial(placement='other'){if(S.noads||adHold())return Promise.resolve();GameStats.send('interstitial_requested',{placement});return PF.interstitial();},
+ interstitial(placement='other'){if(S.noads||adHold())return Promise.resolve();GameStats.send('interstitial_requested',{placement});return PF.interstitial(placement);},
  async rewarded(placement='other'){
   if(adHold())return false;
   GameStats.send('reward_action',{placement,action:'requested'});
@@ -156,12 +156,14 @@ const Snd={ctx:null,last:0,lastThud:0,lastVoice:0,buf:{},musicSrc:null,
  make(){if(!this.ctx){try{this.ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}},
  init(){this.make();if(this.ctx&&!soundMuted())syncAudioContext();this.music(S.sound);},
  // грузим и раскодируем все звуки заранее (контекст может быть «уснувшим» до первого касания — это не мешает)
- async load(){
+ // v544: part 'first' — по одному варианту каждого звука, 'rest' — остальные и музыка; без аргумента всё сразу
+ async load(part){
   this.make();if(!this.ctx)return;
   const jobs=[];
   for(const [k,v] of Object.entries(SFX_FILES)){
    const files=k==='music'?['music.mp3']:v===0?[`${k}.${PF.sfxExt}`]:Array.from({length:v},(_,i)=>`${k}_${i+1}.${PF.sfxExt}`);
-   for(const f of files)jobs.push(fetch('assets/sfx/'+f).then(r=>r.ok?r.arrayBuffer():null).then(a=>a&&new Promise(res=>this.ctx.decodeAudioData(a,res,()=>res(null)))).then(b=>{if(b)(this.buf[k]=this.buf[k]||[]).push(b);}).catch(()=>{}));
+   const list=part==='first'?(k==='music'?[]:files.slice(0,1)):part==='rest'?(k==='music'?files:files.slice(1)):files;
+   for(const f of list)jobs.push(fetch('assets/sfx/'+f).then(r=>r.ok?r.arrayBuffer():null).then(a=>a&&new Promise(res=>this.ctx.decodeAudioData(a,res,()=>res(null)))).then(b=>{if(b)(this.buf[k]=this.buf[k]||[]).push(b);}).catch(()=>{}));
   }
   await Promise.all(jobs);
   if(this.ctx.state==='running')this.music(S.sound);

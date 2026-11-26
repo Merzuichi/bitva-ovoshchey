@@ -427,7 +427,7 @@ const Tut={on:false,i:0,t:0,x:0,foes:[],hp:0,full:false};
 const TUT_STEPS=()=>{const pc=matchMedia('(hover:hover) and (pointer:fine)').matches,move=pc?'[data-k=right]':'#joy',jump=pc?'.keys [data-k=jump]':'#touchJump',atk='#controls .atk';return [
  {id:'walk',txt:pc?'Иди вправо: зажми клавишу →':'Сдвинь джойстик вправо',hl:move},
  {id:'jump',txt:pc?'Прыгни: нажми ↑ или пробел':'Нажми кнопку ↑ — это прыжок. Джойстиком выбирай направление',hl:jump},
- {id:'dash',txt:pc?'Рывок — нажми Q. Направление задаётся движением, перезарядка — 1,2 с':'Нажми » для рывка. Направление задаётся джойстиком, перезарядка — 1,2 с',hl:pc?null:'#touchDash'},
+ {id:'dash',txt:pc?'Рывок — нажми E или Shift. Направление задаётся движением, перезарядка — 1,2 с':'Нажми » для рывка. Направление задаётся джойстиком, перезарядка — 1,2 с',hl:pc?null:'#touchDash'},
  ...(Run.def?.firstMinutes?[{id:'crate',txt:pc?'Разбей ящик: подойди и нажми мышку или F. Внутри монеты, здоровье или усиление!':'Разбей ящик: подойди и нажми кнопку атаки. Внутри монеты, здоровье или усиление!',hl:atk},{id:'loot',txt:'Подойди к монетам из ящика — они подберутся автоматически',hl:null}]:[]),
  {id:'hit',txt:pc?'Подойди к врагу: нажми левую кнопку мыши или F':'Подойди к врагу и нажми кнопку удара',hl:atk},
  {id:'charge',txt:pc?'Зажми левую кнопку мыши или F, пока оружие не засветится':'Главный приём! Зажми кнопку удара, пока оружие не засветится',hl:atk},
@@ -615,7 +615,7 @@ const TRIAL_CHANCE=.65,TRIAL_GAP=1,TRIAL_BY_AD=true;  // offers remain optional,
 let trialWait=1;
 // хватает монет на биту, а её ещё нет: подсвечиваем её на экране героя
 const batTutWanted=()=>!S.dev&&!S.all&&!weaponOwned('bat')&&S.coins>=WEAPONS.bat.lock;
-new Image().src='assets/ui/ui_offer_badge.png?v=1';  // заранее, чтобы бейдж не появлялся пустым
+addEventListener('veggie-menu',()=>{new Image().src='assets/ui/ui_offer_badge.png?v=1';},{once:true});  // заранее, чтобы бейдж не появлялся пустым
 // оружие на текущий уровень: пока игрок на этом уровне, оно сохраняется и при повторной попытке
 const trialWeapon=()=>{const q=Run.trial;return q&&!q.off&&q.kind===Run.kind&&q.idx===Run.idx?q.w:null;};  // v=486: q.off — игрок выбрал в окне героя своё оружие
 // выпало ли предложение после этой победы: возвращает оружие или null

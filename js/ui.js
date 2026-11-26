@@ -251,7 +251,7 @@ const fineInput=()=>matchMedia('(hover:hover) and (pointer:fine)').matches;
 const SB_PLAY_STEPS=()=>[
  {txt:fineInput()?'Ходи стрелками ← →':'Ходи джойстиком',hl:fineInput()?'#controls .keys':'#joy',ok:s=>!!SbPlay.ent&&Math.abs(SbPlay.ent.parts.torso.position.x-s.x0)>70},
  {txt:fineInput()?'Прыжок — пробел или ↑':'Нажми кнопку ↑ — это прыжок. Джойстиком выбирай направление',hl:fineInput()?'#controls .keys [data-k=jump]':'#touchJump',ok:s=>s.jumped},
- {txt:fineInput()?'Рывок — нажми Q. Направление задаётся движением, перезарядка — 1,2 с':'Нажми » для рывка. Направление задаётся джойстиком, перезарядка — 1,2 с',hl:fineInput()?null:'#touchDash',ok:()=>!!SbPlay.ent?.lastDashAt},
+ {txt:fineInput()?'Рывок — нажми E или Shift. Направление задаётся движением, перезарядка — 1,2 с':'Нажми » для рывка. Направление задаётся джойстиком, перезарядка — 1,2 с',hl:fineInput()?null:'#touchDash',ok:()=>!!SbPlay.ent?.lastDashAt},
  {txt:fineInput()?'Удар — F или мышка, зажми для сильного удара. Палка бьёт сама':'Удар — кнопка справа внизу, зажми для сильного удара. Палка бьёт сама',hl:'#controls .atk',ok:s=>s.hit||s.t>300},
  {txt:'Нажми ⚔️ — и бойцы других команд нападут на тебя',hl:'#bFight',ok:()=>SandboxMode.fight},
  {txt:'Чтобы вернуться к созданию, нажми на героя вверху ещё раз',hl:'#bPlay',end:true},
@@ -923,7 +923,7 @@ document.querySelectorAll('#controls [data-k]').forEach(b=>{
 {const placeDash=()=>{const d=$('#touchDash'),to=document.body.classList.contains('is-mobile')?$('#controls .cl'):$('#controls .cr');if(d&&to&&d.parentNode!==to){if(to.classList.contains('cr'))to.insertBefore(d,to.querySelector('.atk'));else to.appendChild(d);}};
  placeDash();new MutationObserver(placeDash).observe(document.body,{attributes:true,attributeFilter:['class']});}
 const keyBtn=(k,on)=>document.querySelectorAll(`#controls [data-k=${k}]`).forEach(b=>b.classList.toggle('on',on));
-const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'jump',KeyW:'jump',Space:'jump',KeyQ:'dash',KeyL:'dash',KeyF:'attack',KeyJ:'attack',KeyK:'attack',Enter:'attack'};
+const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'jump',KeyW:'jump',Space:'jump',KeyE:'dash',ShiftLeft:'dash',ShiftRight:'dash',KeyL:'dash',KeyF:'attack',KeyJ:'attack',KeyK:'attack',Enter:'attack'};
 addEventListener('keydown',e=>{if($('#modal').classList.contains('on'))return;if(screen!=='play'&&!(screen==='sandbox'&&SbPlay.ent))return;const k=KEYMAP[e.code];if(k){if(k==='jump'&&!keys.jump)queueJump();if(k==='dash'&&!keys.dash)queueDash();if(k==='attack'&&!keys.attack)queueAttackPress();keys[k]=true;keyBtn(k,true);e.preventDefault();}if(e.code==='Escape'&&PF.escPause)openPause();if(e.code==='KeyR'&&Run.type==='puzzle')restartLevel();});
 addEventListener('keyup',e=>{const k=KEYMAP[e.code];if(k){keys[k]=false;keyBtn(k,false);}});
 function resetGameInput(){
@@ -942,7 +942,7 @@ function updateDashUI(){
  b.classList.toggle('cooldown',cooling);b.setAttribute('aria-disabled',String(cooling));
  const text=cooling?(left/60).toFixed(1):'»',glyph=b.querySelector('.dash-glyph');if(glyph&&glyph.textContent!==text)glyph.textContent=text;
  if(h&&!h.dead&&!S.tut.dash&&dashCoachHero!==h&&!Intro.active&&!Tut.on&&!SbTut.on&&!$('#tutor').classList.contains('on')&&!paused){
-  dashCoachHero=h;showTip(t(fineInput()?'Рывок — нажми Q. Направление задаётся движением, перезарядка — 1,2 с':'Нажми » для рывка. Направление задаётся джойстиком, перезарядка — 1,2 с'));
+  dashCoachHero=h;showTip(t(fineInput()?'Рывок — нажми E или Shift. Направление задаётся движением, перезарядка — 1,2 с':'Нажми » для рывка. Направление задаётся джойстиком, перезарядка — 1,2 с'));
   GameStats.send('tutorial_step',{tutorial:'dash',step:'hint'});
  }
 }
@@ -998,8 +998,8 @@ function onViewport(){
  setLang(detectLang());applyStaticText(); // сразу: экран поворота виден уже во время загрузки
  resize();makeBounds();addEventListener('resize',onViewport);
  // portrait mode active
- Snd.load();
- await Promise.race([loadSprites(),new Promise(r=>setTimeout(r,30000))]);
+ if(!PF.bootAssets)Snd.load();  // v544: CrazyGames грузит до старта только нужное для первого боя (PF.bootAssets), остальное — PF.afterReady
+ await Promise.race([PF.bootAssets?PF.bootAssets():loadSprites(),new Promise(r=>setTimeout(r,30000))]);
  if(!PF.initFirst)await Y.init();
  S=migrate(await Y.load());
  saveReady=true;
@@ -1018,19 +1018,24 @@ function onViewport(){
   }
  }catch(e){window.__autoStart=false;console.warn('autostart',e);}
  $('#loading').remove();
+ // v543: PF.lateRest (CrazyGames) — остальное докачивается только после показа игры: там считают объём до первого gameplayStart
+ const loadRest=()=>{
  dispatchEvent(new Event('veggie-menu'));  // v=480: догружаем фоны уровней (sprites.js, sprRest)
  // v=491: картинки окна «История» (обложки актов, рамка, мини-карты) тянем в кэш заранее — окно открывается без ожидания
  setTimeout(()=>{const u=[];for(let a=1;a<=ACTS.length;a++)u.push(`assets/maps/act_${a}.jpg?v=${ASSET_V}`,`assets/maps/act_${a}_open.jpg?v=${ASSET_V}`);
   u.push('assets/ui/ui_act_frame.png?v=20');if(typeof MAPS!=='undefined')for(const m of MAPS)if(m&&m.id)u.push(`assets/maps/ui_map_${m.id}.png?v=${ASSET_V}`);
   for(const s of u){const im=new Image();im.decoding='async';im.src=s;}},400);
+ };
+ if(!PF.lateRest)loadRest();
  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(showCoins); // ширина числа зависит от загруженного шрифта
  requestAnimationFrame(loop);
  // game_ready — только когда видимый интерфейс (логотип, кнопки, HUD) реально загружен и отрисован
  {const vis=[...document.querySelectorAll('img')].filter(i=>i.offsetParent&&!i.complete);
-  await Promise.race([Promise.all(vis.map(i=>new Promise(r=>{i.addEventListener('load',r,{once:true});i.addEventListener('error',r,{once:true});}))),new Promise(r=>setTimeout(r,4000))]);
+  await Promise.race([Promise.all(vis.map(i=>new Promise(r=>{i.addEventListener('load',r,{once:true});i.addEventListener('error',r,{once:true});}))),new Promise(r=>setTimeout(r,PF.fast?1200:4000))]);
   try{await Promise.race([document.fonts?document.fonts.ready:0,new Promise(r=>setTimeout(r,1500))]);}catch(e){}
   await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));}
  Y.ready();if(!paused)Y.start();
+ if(PF.afterReady)PF.afterReady(loadRest);else if(PF.lateRest)loadRest();
  GameStats.loaded();
  // режим скриншотов для страницы игры (tools/shots.js)
  if(PF.devAllowed&&new URLSearchParams(location.search).get('shot'))await new Promise(r=>{const sc=document.createElement('script');sc.src='tools/shots.js';sc.onload=r;sc.onerror=r;document.head.appendChild(sc);});

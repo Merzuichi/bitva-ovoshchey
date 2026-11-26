@@ -6,14 +6,16 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
  sfxExt:'mp3',         // сборка перекодирует .wav в .mp3, как для Playgama
  escPause:true,        // Esc открывает паузу
  devAllowed:['localhost','127.0.0.1','[::1]',''].includes(location.hostname), // режим разработчика только при локальном запуске
- initFirst:false,      // SDK можно запускать после загрузки ресурсов
+ initFirst:true,       // v546: SDK до загрузки ресурсов — по облачному сохранению видно, новичок ли это (быстрый старт)
+ lateRest:true,        // фоны остальных глав — после начала игры
  arcadeAdEvery:3,      // аркада: реклама раз в столько уровней
  storyAdEvery:2,       // история: реклама раз в столько уровней
  async init(){
+  this.wrapBoot();
   try{
-   await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://games.pikabu.ru/sdk/sdk.js';s.async=true;s.onload=res;s.onerror=rej;document.head.appendChild(s);setTimeout(rej,12000);});
+   await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://games.pikabu.ru/sdk/sdk.js';s.async=true;s.onload=res;s.onerror=rej;document.head.appendChild(s);setTimeout(rej,10000);});
    // вне площадки init() может не ответить вовсе — не даём игре зависнуть на загрузке
-   this.sdk=await Promise.race([PkbSDK.init(),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),12000))]);
+   this.sdk=await Promise.race([PkbSDK.init(),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))]);
    this.pid=this.sdk.player&&this.sdk.player.id||null;
    this.debug({event:'init',rewarded:this.sdk.ads.rewarded.isSupported,fullscreen:this.sdk.ads.fullscreen.isSupported,preloader:this.sdk.ads.preloader.isSupported,auth:!!this.sdk.player.isAuthorized});
    // ошибки облачного сохранения: при конфликте (игра открыта на другом устройстве/вкладке) дальнейшие записи невозможны до перезагрузки
@@ -36,6 +38,67 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
  debug(info){
   console.log('[PF]',JSON.stringify(info));
   try{if(/pkbdebug/.test(location.search))parent.postMessage({pkbDebug:info},'*');}catch(e){}
+ },
+ /* ---------- быстрый старт (перенесён из версии для CrazyGames, v544): новичку до боя нужен только набор первой сцены ---------- */
+ // вернувшимся игрокам грузим как обычно — файлы уже в кэше браузера
+ fast:false,booting:false,abIntro:'',sceneReady:null,coreReady:null,coreDone:true,sceneDone:true,
+ SETS:{
+  intro:{chars:['ogurets','perets','pomidor'],map:'factory',wpn:['smg','fists','bat'],more:/^(icon_reload|ui_reload_ring|ui_ammo_full|ui_ammo_empty)$/},
+  control:{chars:['ogurets','perets'],map:'garden',wpn:['fists'],more:/^(sunflower|fence_garden|cloud\d)$/},
+ },
+ COMMON:/^(face_|ovl_|icon_coin$)/,
+ HUD:['ui_ribbon','ui_coinbar','ui_ib','ui_ib_alt'],
+ inSet(k,v){const s=this.SETS[v];
+  return this.COMMON.test(k)||s.more.test(k)||k===`bg_${s.map}`||k===`floor_${s.map}`||s.wpn.some(w=>k==='wpn_'+w)||s.chars.some(c=>k.startsWith(`char_${c}_`));},
+ sprite(k){return SPR[k]?Promise.resolve():new Promise(res=>{const im=new Image();im.onload=()=>{SPR[k]=im;fitSprite(k,im);res();};im.onerror=res;im.src='assets/'+SPRITES[k]+'?v='+ASSET_V;});},
+ isNew(){
+  let local=null;try{local=localStorage.getItem(SAVE_KEY);}catch(e){}
+  let cloud=null;try{cloud=this.sdk?this.sdk.storage.get('save'):null;}catch(e){}
+  return !!this.sdk&&!local&&cloud==null;
+ },
+ async bootAssets(){
+  this.fast=this.isNew();
+  if(!this.fast){Snd.load();return loadSprites();}
+  this.booting=true;this.sceneDone=this.coreDone=false;
+  const q=this.devAllowed?new URLSearchParams(location.search).get('intro'):null;
+  this.abIntro=q==='1'?'intro':q==='0'?'control':Math.random()<.5?'intro':'control';
+  this.foes=Intro.FOES;Intro.FOES=['perets','pomidor'];  // остальные противники интро выходят, как только догрузятся
+  const keys=[...AVAILABLE].filter(k=>SPRITES[k]&&this.inSet(k,this.abIntro)),total=keys.length+this.HUD.length;let done=0;
+  const tick=()=>{done++;const e=document.getElementById('loadText');if(e)e.textContent=t('Загрузка')+' '+Math.round(done/total*100)+'%';};
+  await Promise.all([...keys.map(k=>this.sprite(k).then(tick)),...this.HUD.map(n=>new Promise(r=>{const im=new Image();im.onload=im.onerror=()=>{tick();r();};im.src=`assets/ui/${n}.png?v=20`;}))]);
+ },
+ // игра уже идёт: сначала звуки и вторая стартовая сцена, затем остальные герои и оружие, эффекты, в конце фоны глав
+ async afterReady(loadRest){
+  if(!this.fast){loadRest();return;}
+  this.booting=false;
+  const all=[...AVAILABLE].filter(k=>SPRITES[k]),get=f=>Promise.all(all.filter(f).map(k=>this.sprite(k)));
+  const late=k=>/^(bg_|floor_)/.test(k)||/^(item_|veg_|cog_|portrait_)/.test(k);
+  let sceneOk,coreOk;this.sceneReady=new Promise(r=>sceneOk=r);this.coreReady=new Promise(r=>coreOk=r);
+  await Promise.all([Snd.load('first'),Intro.active?get(k=>/^char_(kukuruza|kapusta)_/.test(k)).then(()=>{Intro.FOES=this.foes;}):0]);
+  Intro.FOES=this.foes;
+  await get(k=>this.inSet(k,'control'));
+  this.sceneDone=true;sceneOk();
+  await get(k=>/^(char_|wpn_)/.test(k));
+  this.coreDone=true;coreOk();
+  await get(k=>/^(fx_|tfx_)/.test(k));
+  await get(k=>!late(k));
+  await Promise.all([Snd.load('rest'),get(late)]);
+  loadRest();
+ },
+ wrapBoot(){
+  // меню под экраном загрузки новому игроку не видно, а его картинки весят 1,7 МБ
+  const menu=buildMenu;buildMenu=()=>{if(!this.booting)menu();};
+  const v=Intro.variant;Intro.variant=()=>{if(this.abIntro){S.ab=S.ab||{};if(!S.ab.intro)S.ab.intro=this.abIntro;}return v.call(Intro);};
+  // следующая глава, аркада и песочница ждут, пока догрузятся герои (обычно уже готово)
+  const gate=(fn,ready)=>(...a)=>{const p=ready(...a);if(!p)return fn(...a);this.waitLoad(p).then(()=>fn(...a));};
+  startStory=gate(startStory,i=>i>0?(this.coreDone?null:this.coreReady):(this.sceneDone?null:this.sceneReady));
+  startArcade=gate(startArcade,()=>this.coreDone?null:this.coreReady);
+  enterSandbox=gate(enterSandbox,()=>this.coreDone?null:this.coreReady);
+ },
+ waitLoad(p){
+  const c=document.createElement('div');c.style.cssText='position:fixed;inset:0;z-index:1500;background:#12352dee;color:#fff;display:flex;align-items:center;justify-content:center;font:900 28px Nunito,sans-serif';
+  c.textContent=t('Загрузка')+'...';document.body.appendChild(c);pauseAll(true,'loadwait');
+  return Promise.race([p,new Promise(r=>setTimeout(r,20000))]).then(()=>{c.remove();pauseAll(false,'loadwait');});
  },
  restore(){},
  online(){return !!this.sdk;},

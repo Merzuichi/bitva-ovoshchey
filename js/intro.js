@@ -11,7 +11,7 @@ const Intro={
  SLOW_T:90,      // последние ~1,5 с кат-сцены — слоу-мо
  DEF:{introBattle:true,n:'Финальная битва',en:'The Final Battle',type:'arena',obj:'intro',map:'factory',len:6000,plats:[],hazards:[],enemies:[],props:[],allies:[],mods:[]},
  SCALE:1,          // v538: обычный размер прокачанного героя (при ×1,1 физика тела поднимала его над полом)
- WAVES:5,          // волн после кат-сцены (стороны чередуются)
+ WAVES:2,          // волн после кат-сцены (стороны чередуются)
  FINALE_T:240,     // ~5 с финальной толпы
  MAX_T:3600,       // страховка: не дольше минуты до финала
  FOES:['perets','kukuruza','kapusta','pomidor'],
