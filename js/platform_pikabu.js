@@ -33,6 +33,7 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
  },
  async init(){
   this.wrapBoot();
+  this.prefetch();
   try{
    await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://games.pikabu.ru/sdk/sdk.js';s.async=true;s.onload=res;s.onerror=rej;document.head.appendChild(s);setTimeout(rej,10000);});
    // вне площадки init() может не ответить вовсе — не даём игре зависнуть на загрузке
@@ -73,7 +74,15 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
  HUD:['ui_ribbon','ui_coinbar','ui_ib','ui_ib_alt'],
  inSet(k,v){const s=this.SETS[v];
   return this.COMMON.test(k)||s.more.test(k)||k===`bg_${s.map}`||k===`floor_${s.map}`||s.wpn.some(w=>k==='wpn_'+w)||s.chars.some(c=>k.startsWith(`char_${c}_`));},
- sprite(k){return SPR[k]?Promise.resolve():new Promise(res=>{const im=new Image();im.onload=()=>{SPR[k]=im;fitSprite(k,im);res();};im.onerror=res;im.src='assets/'+SPRITES[k]+'?v='+ASSET_V;});},
+ // v552: одна загрузка на файл — предзагрузка во время запуска SDK и bootAssets не качают картинку дважды
+ sprite(k){if(SPR[k])return Promise.resolve();this.loading=this.loading||{};return this.loading[k]||(this.loading[k]=new Promise(res=>{const im=new Image();im.onload=()=>{SPR[k]=im;fitSprite(k,im);res();};im.onerror=res;im.src='assets/'+SPRITES[k]+'?v='+ASSET_V;}));},
+ // v552: пока грузится и запускается SDK, качаем то, что нужно первой сцене при любом варианте A/B (~360 КБ).
+ // Пикабу считает «скорость загрузки» от запуска SDK до gameStarted, а с v545 SDK запускается до загрузки картинок.
+ prefetch(){
+  let local=null;try{local=localStorage.getItem(SAVE_KEY);}catch(e){}
+  if(local)return;  // вернувшийся игрок — всё грузится обычным путём и уже лежит в кэше
+  try{[...AVAILABLE].filter(k=>SPRITES[k]&&this.inSet(k,'intro')&&this.inSet(k,'control')).forEach(k=>this.sprite(k));}catch(e){}
+ },
  isNew(){
   let local=null;try{local=localStorage.getItem(SAVE_KEY);}catch(e){}
   let cloud=null;try{cloud=this.sdk?this.sdk.storage.get('save'):null;}catch(e){}

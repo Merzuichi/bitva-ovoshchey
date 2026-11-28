@@ -6,7 +6,7 @@
 // Показы рекламы, покупки, начало/конец сессии и сообщения platform.sendMessage площадка пишет сама — их здесь не дублируем.
 const TUTORIAL_VERSION='t396';  // менять при изменении шагов обучения
 const GameStats={
- version:'551',mode:null,modeMs:0,attempt:null,attemptNumber:0,lastTime:0,frames:[],sampleMs:0,milestones:new Set(),
+ version:'552',mode:null,modeMs:0,attempt:null,attemptNumber:0,lastTime:0,frames:[],sampleMs:0,milestones:new Set(),
  log:[],LOG_MAX:400,counters:{},bootAt:performance.now(),
  debug:(()=>{try{return PF.devAllowed&&new URLSearchParams(location.search).get('analytics')==='debug';}catch(_){return false;}})(),
  context(){
