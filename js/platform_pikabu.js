@@ -16,7 +16,7 @@ const PF={name:'pikabu',sdk:null,lastAd:0,started:Date.now(),
  AD_GAP:120000,        // v548: межстраничная не чаще раза в 2 минуты — минимум площадки (было 3,5 мин)
  // v547: игровые события (GameStats.send) дублируются целями в наш счётчик Яндекс Метрики.
  // null — отправка выключена. Локально не шлём (только с ?metrika=1), чтобы не засорять статистику тестами.
- metrikaId:null,       // выключено до письменного согласия Пикабу (п. 4.7 оферты); счётчик 114707939
+ metrikaId:114707939,  // счётчик «Битва овощей — Пикабу», сайт merzuichi.github.io/bitva-ovoshchey
  track(name,payload){
   const id=this.metrikaId;if(!id)return;
   if(this.devAllowed&&!new URLSearchParams(location.search).has('metrika'))return;
